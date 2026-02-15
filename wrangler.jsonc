@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "yenzi-backend",
+  "name": "hono-cloudflare-starter",
   "main": "src/index.ts",
   "compatibility_date": "2026-02-12",
   "assets": {
@@ -13,15 +13,15 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "NODE_ENV": "production",
-    "FRONTEND_URL": "https://your-frontend-url.vercel.app",
-    "EXPO_APP_URL": "https://your-expo-app.com"
+    "FRONTEND_URL": "https://your-frontend-url.com",
+    "API_URL": "https://your-api-url.workers.dev"
   },
   "env": {
     "development": {
       "vars": {
         "NODE_ENV": "development",
         "FRONTEND_URL": "http://localhost:3000",
-        "EXPO_APP_URL": "http://localhost:19006"
+        "API_URL": "http://localhost:8787"
       }
     }
   }

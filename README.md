@@ -1,226 +1,255 @@
-# Yenzi Backend - Social Media Platform API
+# Hono Cloudflare Starter
 
-A modern, scalable social media backend built with Cloudflare Workers, Hono, Better Auth, and Neon Postgres.
-
-## Tech Stack
-
-- **Runtime**: Cloudflare Workers (Edge Computing)
-- **Framework**: Hono (Ultra-fast web framework)
-- **Authentication**: Better Auth (TypeScript-first auth framework)
-- **Database**: Neon Postgres (Serverless PostgreSQL)
-- **ORM**: Drizzle ORM (Type-safe SQL)
-- **Validation**: Zod (Schema validation)
-- **Language**: TypeScript
-- **Package Manager**: Bun
+A production-ready authentication backend template built with **Hono**, **Better Auth**, **Drizzle ORM**, and **Cloudflare Workers**. Spin up secure, scalable APIs in minutes.
 
 ## Features
 
-### Authentication (Better Auth)
-- Email/Password authentication
-- OAuth providers (Google, LinkedIn)
-- Username plugin (unique usernames)
-- Organization plugin (teams/communities)
-- Admin plugin (user management)
-- Passkey plugin (WebAuthn/passwordless)
-- Two-factor authentication (2FA)
-- Email verification
-- Password reset
-- Rate limiting
+- **Authentication** - Complete auth system via Better Auth
+  - Email/password authentication
+  - OAuth providers (Google, GitHub, LinkedIn)
+  - Email verification
+  - Password reset
+  - Session management
+  - Organizations/teams support
+  - Admin panel
+  
+- **Database** - Type-safe PostgreSQL with Drizzle ORM
+  - Auto-generated migrations
+  - Relations and types
+  - Connection pooling ready
+  
+- **API** - Modern REST API with OpenAPI docs
+  - Automatic Swagger documentation
+  - Request validation with Zod
+  - Health check endpoints
+  - Rate limiting
+  
+- **Developer Experience**
+  - TypeScript throughout
+  - Hot reload development
+  - CLI scaffolding tool
+  - Comprehensive error handling
+  
+- **Production Ready**
+  - Cloudflare Workers deployment
+  - Environment-based configuration
+  - CORS configured
+  - Secure by default
 
-### Social Media Features
-- **Posts**: Create, read, delete posts with media support
-- **Comments**: Add comments to posts
-- **Likes**: Like/unlike posts and comments
-- **Follows**: Follow/unfollow users
-- **User Profiles**: Rich user profiles with bio, avatar, stats
-- **Feed**: Discovery feed with pagination
+## Quick Start
 
-### API Endpoints
+### Prerequisites
 
-#### Auth Routes (Better Auth)
-All auth routes are automatically handled by Better Auth at `/api/auth/*`:
+- [Bun](https://bun.sh) (v1.0+)
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
+- PostgreSQL database (we recommend [Neon](https://neon.tech))
 
-- `POST /api/auth/sign-up/email` - Register with email/password
-- `POST /api/auth/sign-in/email` - Login with email/password
-- `POST /api/auth/sign-out` - Logout
-- `GET /api/auth/session` - Get current session
-- `POST /api/auth/forget-password` - Request password reset
-- `POST /api/auth/verify-email` - Verify email address
-- `POST /api/auth/sign-in/social` - OAuth login (Google, LinkedIn)
+### Option 1: Use the CLI Scaffolding Script
 
-#### Application Routes
+```bash
+# Clone this template
+git clone https://github.com/yourusername/hono-cloudflare-starter.git
+cd hono-cloudflare-starter
 
-**Posts**
-- `GET /api/posts` - Get feed (discovery/mixed)
-- `GET /api/posts/:id` - Get single post
-- `POST /api/posts` - Create post (authenticated)
-- `DELETE /api/posts/:id` - Delete own post (authenticated)
-- `POST /api/posts/:id/like` - Like/unlike post (authenticated)
-- `GET /api/posts/:id/comments` - Get post comments
-- `POST /api/posts/:id/comments` - Add comment (authenticated)
+# Create a new project
+./create-project.sh my-awesome-api
 
-**Users**
-- `GET /api/users/me` - Get current user profile (authenticated)
-- `PATCH /api/users/me` - Update profile (authenticated)
-- `GET /api/users/:id` - Get user profile
-- `GET /api/users/:id/posts` - Get user's posts
-- `POST /api/users/:id/follow` - Follow/unfollow user (authenticated)
-- `GET /api/users/:id/followers` - Get followers list
-- `GET /api/users/:id/following` - Get following list
+# Or with npx (when published)
+npx create-hono-cloudflare my-awesome-api
+```
 
-**Health**
-- `GET /api/health` - Health check
-- `GET /api/health/ready` - Readiness check (includes DB connection)
+### Option 2: Manual Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/hono-cloudflare-starter.git my-project
+cd my-project
+
+# Install dependencies
+bun install
+
+# Set up environment variables
+cp .env.example .env
+
+# Edit .env with your configuration
+# - Generate BETTER_AUTH_SECRET: openssl rand -base64 32
+# - Add your DATABASE_URL from Neon
+
+# Generate auth schema and push to database
+bun run auth:generate
+bun run db:push
+
+# Start development server
+bun run dev
+```
+
+Your API will be running at `http://localhost:8787`
 
 ## Project Structure
 
 ```
-src/
-├── index.ts                    # Main application entry point
-├── auth/
-│   ├── index.ts               # Better Auth server configuration
-│   └── auth-client.ts         # Auth client configuration
-├── routes/
-│   ├── index.ts               # Route aggregator
-│   ├── posts.ts               # Post endpoints
-│   ├── users.ts               # User endpoints
-│   └── health.ts              # Health check endpoints
-├── db/
-│   ├── index.ts               # Database connection
-│   ├── schema.ts              # Drizzle schema definitions
-│   └── migrations/            # Migration files
-├── middleware/
-│   ├── cors.ts                # CORS configuration
-│   ├── auth.ts                # Authentication middleware
-│   └── error.ts               # Error handling
-├── types/
-│   └── index.ts               # TypeScript type definitions
-└── utils/
-    └── index.ts               # Utility functions
+.
+├── src/
+│   ├── auth/                 # Better Auth configuration
+│   │   ├── index.ts         # Auth server setup
+│   │   └── auth-client.ts   # Auth client for frontend
+│   ├── db/                   # Database layer
+│   │   ├── index.ts         # Database connection
+│   │   ├── schema/          # Drizzle schema definitions
+│   │   │   ├── auth.ts
+│   │   │   ├── organizations.ts
+│   │   │   └── types/
+│   │   └── migrations/      # Migration files
+│   ├── middleware/           # Hono middleware
+│   │   ├── auth.ts          # Authentication middleware
+│   │   ├── cors.ts          # CORS configuration
+│   │   └── error.ts         # Error handling
+│   ├── openapi/             # OpenAPI documentation
+│   │   ├── schemas.ts
+│   │   └── spec.ts
+│   ├── routes/              # API routes
+│   │   ├── docs.ts          # Swagger UI
+│   │   ├── health.ts        # Health endpoints
+│   │   └── index.ts         # Route aggregator
+│   ├── types/               # TypeScript types
+│   │   └── index.ts
+│   ├── utils/               # Utility functions
+│   │   └── index.ts
+│   └── index.ts             # Application entry point
+├── public/                   # Static assets
+├── .env.example             # Environment template
+├── create-project.sh        # CLI scaffolding script
+├── drizzle.config.ts        # Drizzle configuration
+├── package.json
+├── tsconfig.json
+└── wrangler.jsonc           # Cloudflare Workers config
 ```
 
-## Getting Started
+## API Endpoints
 
-### Prerequisites
+### Authentication (Better Auth)
 
-- [Bun](https://bun.sh) installed
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) installed
-- A [Neon](https://neon.tech) database account
-- OAuth credentials from Google and LinkedIn (optional, for OAuth login)
+All auth routes are automatically available at `/api/auth/*`:
 
-### Installation
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/sign-up/email` | Register with email/password |
+| POST | `/api/auth/sign-in/email` | Login with email/password |
+| POST | `/api/auth/sign-out` | Logout |
+| GET | `/api/auth/session` | Get current session |
+| POST | `/api/auth/forget-password` | Request password reset |
+| POST | `/api/auth/verify-email` | Verify email address |
+| POST | `/api/auth/sign-in/social` | OAuth login (Google, GitHub, LinkedIn) |
 
-1. **Clone the repository**
-   ```bash
-   git clone <repo-url>
-   cd yenzi-backend
-   ```
+### Application Routes
 
-2. **Install dependencies**
-   ```bash
-   bun install
-   ```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/health` | Health check |
+| GET | `/api/v1/health/ready` | Readiness check (DB connection) |
+| GET | `/api/v1/openapi.json` | OpenAPI specification |
+| GET | `/docs` | Swagger UI (basic auth protected) |
 
-3. **Set up environment variables**
-   
-   Copy the example file and fill in your values:
-   ```bash
-   cp .env .env
-   ```
+### Documentation
 
-   Edit `.dev.vars` with your credentials:
-   ```
-   # Better Auth
-   BETTER_AUTH_SECRET=your_32_char_secret_here
-   BETTER_AUTH_URL=http://localhost:8787
+Access the Swagger UI at `http://localhost:8787/docs` (default credentials: admin/admin)
 
-   # Database
-   DATABASE_URL=postgresql://user:password@ep-xxx.us-east-1.aws.neon.tech/dbname?sslmode=require
+## Environment Variables
 
-   # OAuth (optional)
-   GOOGLE_CLIENT_ID=your_google_client_id
-   GOOGLE_CLIENT_SECRET=your_google_client_secret
-   LINKEDIN_CLIENT_ID=your_linkedin_client_id
-   LINKEDIN_CLIENT_SECRET=your_linkedin_client_secret
+Copy `.env.example` to `.env` and configure:
 
-   # Frontend URLs
-   FRONTEND_URL=http://localhost:3000
-   EXPO_APP_URL=http://localhost:19006
-   ```
+```env
+# Required
+BETTER_AUTH_SECRET=your_32_char_secret
+BETTER_AUTH_URL=http://localhost:8787
+DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
 
-4. **Generate Better Auth secret**
-   ```bash
-   openssl rand -base64 32
-   ```
-   Copy the output to `BETTER_AUTH_SECRET` in `.dev.vars`
+# Optional - OAuth Providers
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
 
-### Database Setup
+# Frontend URLs (for CORS)
+FRONTEND_URL=http://localhost:3000
 
-1. **Generate Better Auth schema**
-   ```bash
-   bun run auth:generate
-   ```
+# Swagger Auth
+SWAGGER_USERNAME=admin
+SWAGGER_PASSWORD=your_password
+```
 
-2. **Generate app schema migrations**
-   ```bash
-   bun run db:generate
-   ```
+## Database Setup
 
-3. **Push schema to database**
-   ```bash
-   bun run db:push
-   ```
+### Using Neon (Recommended)
 
-   Or migrate using Better Auth CLI:
-   ```bash
-   bun run auth:migrate
-   ```
+1. Create a free account at [neon.tech](https://neon.tech)
+2. Create a new project
+3. Copy the connection string
+4. Add it to your `.env` file
 
-### Development
+### Running Migrations
 
-Run the development server:
 ```bash
-bun run dev
+# Generate migrations from schema changes
+bun run db:generate
+
+# Push schema to database (development)
+bun run db:push
+
+# Run migrations (production)
+bun run db:migrate
+
+# Open Drizzle Studio
+bun run db:studio
 ```
 
-The API will be available at `http://localhost:8787`
+### Better Auth Schema
 
-### Testing
-
-Health check:
 ```bash
-curl http://localhost:8787/api/health
+# Generate Better Auth tables
+bun run auth:generate
+
+# Or use the Better Auth CLI
+bun run auth:migrate
 ```
 
-### Deployment
+## Deployment
 
-1. **Set secrets in Cloudflare**
+### Deploy to Cloudflare Workers
+
+1. **Install Wrangler and authenticate:**
+   ```bash
+   bun install -g wrangler
+   wrangler login
+   ```
+
+2. **Set up secrets:**
    ```bash
    wrangler secret put BETTER_AUTH_SECRET
    wrangler secret put DATABASE_URL
-   wrangler secret put GOOGLE_CLIENT_ID
-   wrangler secret put GOOGLE_CLIENT_SECRET
-   wrangler secret put LINKEDIN_CLIENT_ID
-   wrangler secret put LINKEDIN_CLIENT_SECRET
+   # Add other secrets as needed
    ```
 
-2. **Deploy to Cloudflare Workers**
+3. **Deploy:**
    ```bash
    bun run deploy
    ```
 
+### Custom Domain (Optional)
+
+Add a custom domain in the Cloudflare Dashboard:
+
+1. Go to Workers & Pages
+2. Select your worker
+3. Click "Triggers" → "Custom Domains"
+4. Add your domain
+
 ## Frontend Integration
 
-### React (TanStack Start)
+### React/Vue/Angular
 
-Install the auth client:
-```bash
-npm install better-auth @better-auth/passkey
-```
-
-Example usage:
 ```typescript
-import { authClient } from "yenzi-backend/src/auth/auth-client";
+import { authClient } from "hono-cloudflare-starter/src/auth/auth-client";
 
 // Sign in
 await authClient.signIn.email({
@@ -230,121 +259,169 @@ await authClient.signIn.email({
 
 // Get session
 const { data: session } = await authClient.getSession();
+```
 
-// Create post
-const response = await fetch("/api/posts", {
-  method: "POST",
+### Making Authenticated Requests
+
+```typescript
+const response = await fetch("/api/v1/protected-route", {
+  method: "GET",
+  credentials: "include", // Important for cookies
   headers: {
     "Content-Type": "application/json",
   },
-  credentials: "include",
-  body: JSON.stringify({
-    content: "Hello, World!",
-  }),
 });
 ```
 
-### Expo (React Native)
-
-For Expo, you'll need to use the native auth flow and store cookies properly. Refer to the Better Auth Expo documentation.
-
-## Database Schema
-
-### Better Auth Tables (Auto-generated)
-- `user` - User accounts
-- `account` - OAuth account linking
-- `session` - Active sessions
-- `verification` - Email verifications
-
-### App Tables
-- `posts` - User posts with media support
-- `comments` - Post comments
-- `likes` - Post/comment likes
-- `follows` - User follow relationships
-- `user_profiles` - Extended user profile information
-
 ## Scripts
 
-```bash
-# Development
-bun run dev                 # Start development server
-bun run deploy             # Deploy to Cloudflare Workers
+| Command | Description |
+|---------|-------------|
+| `bun run dev` | Start development server |
+| `bun run deploy` | Deploy to Cloudflare Workers |
+| `bun run db:generate` | Generate Drizzle migrations |
+| `bun run db:migrate` | Run migrations |
+| `bun run db:push` | Push schema to database |
+| `bun run db:studio` | Open Drizzle Studio |
+| `bun run auth:generate` | Generate Better Auth schema |
+| `bun run cf-typegen` | Generate Cloudflare types |
+| `bun run lint` | Type check TypeScript |
 
-# Database
-bun run db:generate        # Generate Drizzle migrations
-bun run db:migrate         # Run migrations
-bun run db:push            # Push schema to database
-bun run db:studio          # Open Drizzle Studio
+## Customization
 
-# Auth
-bun run auth:generate      # Generate Better Auth schema
-bun run auth:migrate       # Run Better Auth migrations
+### Adding New Routes
 
-# Types
-bun run cf-typegen         # Generate Cloudflare types
+Create a new route file in `src/routes/`:
 
-# Linting
-bun run lint               # Type check TypeScript
+```typescript
+// src/routes/users.ts
+import { Hono } from "hono";
+import type { HonoContext } from "../types";
+
+const usersRouter = new Hono<HonoContext>();
+
+usersRouter.get("/", async (c) => {
+  const db = c.get("db");
+  // Your logic here
+  return c.json({ users: [] });
+});
+
+export default usersRouter;
 ```
 
-## Environment Variables
+Register it in `src/routes/index.ts`:
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `BETTER_AUTH_SECRET` | Secret key for encryption (32+ chars) | Yes |
-| `BETTER_AUTH_URL` | Base URL of the API | Yes |
-| `DATABASE_URL` | Neon Postgres connection string | Yes |
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID | No |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | No |
-| `LINKEDIN_CLIENT_ID` | LinkedIn OAuth client ID | No |
-| `LINKEDIN_CLIENT_SECRET` | LinkedIn OAuth client secret | No |
-| `FRONTEND_URL` | Production frontend URL | Yes |
-| `EXPO_APP_URL` | Production mobile app URL | Yes |
-| `NODE_ENV` | Environment (development/production) | Yes |
+```typescript
+import usersRouter from "./users";
 
-## CORS Configuration
+apiRouter.route("/users", usersRouter);
+```
 
-The API is configured to accept requests from:
-- `http://localhost:3000` - React dev server
-- `http://localhost:5173` - Vite dev server
-- `http://localhost:19006` - Expo web
-- Production URLs (configurable in wrangler.jsonc)
+### Adding OAuth Providers
 
-## Rate Limiting
+Edit `src/auth/index.ts`:
 
-API endpoints are rate-limited to prevent abuse:
-- 100 requests per minute per IP
-- Configurable in `src/auth/index.ts`
+```typescript
+socialProviders: {
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID!,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+  },
+  // Add more providers
+  github: {
+    clientId: process.env.GITHUB_CLIENT_ID!,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+  },
+},
+```
 
-## Security Features
+Don't forget to add the client to `src/auth/auth-client.ts` too.
 
-- CSRF protection enabled
-- Secure cookies in production
-- CORS properly configured
-- Rate limiting
-- SQL injection protection (Drizzle ORM)
-- Input validation (Zod)
+### Adding Database Tables
+
+Create a new schema file in `src/db/schema/`:
+
+```typescript
+// src/db/schema/projects.ts
+import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { user } from "./auth";
+
+export const projects = pgTable("projects", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  userId: text("user_id").references(() => user.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+```
+
+Export it from `src/db/schema/index.ts` and generate migrations.
+
+## Security
+
+- **CSRF Protection:** Enabled by default
+- **Secure Cookies:** Automatically set in production
+- **Rate Limiting:** 100 requests/minute per IP
+- **CORS:** Configured for your frontend URLs
+- **Password Hashing:** Argon2id via Better Auth
+- **Session Management:** Secure, HTTP-only cookies
+
+## Troubleshooting
+
+### Database Connection Issues
+
+```bash
+# Test your connection string
+psql "postgresql://..."
+
+# Check SSL requirements
+# Neon requires sslmode=require
+```
+
+### Type Errors
+
+```bash
+# Regenerate types
+bun run cf-typegen
+
+# Clear node_modules and reinstall
+rm -rf node_modules bun.lock
+bun install
+```
+
+### Deployment Failures
+
+1. Check `wrangler.jsonc` configuration
+2. Verify secrets are set: `wrangler secret list`
+3. Check logs: `wrangler tail`
+
+## Tech Stack
+
+- [Hono](https://hono.dev) - Web framework
+- [Better Auth](https://better-auth.com) - Authentication
+- [Drizzle ORM](https://orm.drizzle.team) - Database ORM
+- [Cloudflare Workers](https://workers.cloudflare.com) - Edge runtime
+- [Neon](https://neon.tech) - Serverless Postgres
+- [Zod](https://zod.dev) - Schema validation
+- [Scalar](https://scalar.com) - API documentation
 
 ## Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
 ## License
 
-[MIT](LICENSE)
+MIT License - feel free to use this for personal and commercial projects.
 
 ## Support
 
-For issues and feature requests, please use the [GitHub issue tracker](https://github.com/yourusername/yenzi-backend/issues).
+- [Better Auth Docs](https://better-auth.com/docs)
+- [Hono Docs](https://hono.dev/docs)
+- [Cloudflare Workers Docs](https://developers.cloudflare.com/workers/)
 
-## Acknowledgments
+---
 
-- [Hono](https://hono.dev) - The web framework
-- [Better Auth](https://better-auth.com) - Authentication framework
-- [Drizzle ORM](https://orm.drizzle.team) - Type-safe SQL
-- [Neon](https://neon.tech) - Serverless Postgres
-- [Cloudflare Workers](https://workers.cloudflare.com) - Edge computing platform
+Built with ❤️ using Hono, Better Auth, and Cloudflare Workers.

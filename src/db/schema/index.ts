@@ -28,28 +28,6 @@ export {
   invitationRelations,
 } from "./organizations";
 
-// Posts schema
-export {
-  posts,
-  comments,
-  likes,
-  postsRelations,
-  commentsRelations,
-  likesRelations,
-} from "./posts";
-
-// Follows schema
-export {
-  follows,
-  followsRelations,
-} from "./follows";
-
-// Profiles schema
-export {
-  userProfiles,
-  userProfilesRelations,
-} from "./profiles";
-
 // ============================================
 // Re-export all types
 // ============================================
@@ -79,22 +57,3 @@ export type {
   Invitation,
   NewInvitation,
 } from "./types/organizations";
-
-export type {
-  Post,
-  NewPost,
-  Comment,
-  NewComment,
-  Like,
-  NewLike,
-} from "./types/posts";
-
-export type {
-  Follow,
-  NewFollow,
-} from "./types/follows";
-
-export type {
-  UserProfile,
-  NewUserProfile,
-} from "./types/profiles";

@@ -28,20 +28,6 @@ export const ErrorResponseSchema = z.object({
 // User Schemas
 // ============================================
 
-export const UserProfileSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string(),
-  bio: z.string().nullable().optional(),
-  avatarUrl: z.string().url().nullable().optional(),
-  location: z.string().max(100).nullable().optional(),
-  website: z.string().url().nullable().optional(),
-  followerCount: z.number().default(0),
-  followingCount: z.number().default(0),
-  postCount: z.number().default(0),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
 export const UserSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -55,84 +41,25 @@ export const UserSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 
-export const UserWithProfileSchema = UserSchema.extend({
-  profile: UserProfileSchema,
-});
-
-export const UpdateProfileSchema = z.object({
-  bio: z.string().max(160).optional(),
-  location: z.string().max(100).optional(),
-  website: z.string().url().max(200).optional(),
-  avatarUrl: z.string().url().optional(),
-});
-
-export const UserResponseSchema = UserProfileSchema.extend({
-  isFollowing: z.boolean().optional(),
-});
-
-export const FollowResponseSchema = z.object({
-  following: z.boolean(),
-});
-
-export const FollowerSchema = z.object({
-  followerId: z.string(),
-  createdAt: z.string().datetime(),
-  profile: UserProfileSchema.optional(),
-});
-
-export const FollowingSchema = z.object({
-  followingId: z.string(),
-  createdAt: z.string().datetime(),
-  profile: UserProfileSchema.optional(),
-});
-
 // ============================================
-// Post Schemas
+// Organization Schemas
 // ============================================
 
-export const PostSchema = z.object({
-  id: z.string().uuid(),
-  content: z.string(),
-  mediaUrls: z.array(z.string().url()).nullable().optional(),
-  userId: z.string(),
-  author: UserProfileSchema.optional(),
-  likeCount: z.number().default(0),
-  commentCount: z.number().default(0),
+export const OrganizationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  logo: z.string().url().nullable().optional(),
   createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  metadata: z.string().nullable().optional(),
 });
 
-export const CreatePostSchema = z.object({
-  content: z.string().min(1).max(280),
-  mediaUrls: z.array(z.string().url()).optional(),
-});
-
-export const CommentSchema = z.object({
-  id: z.string().uuid(),
-  content: z.string(),
+export const MemberSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
   userId: z.string(),
-  postId: z.string().uuid(),
-  author: UserProfileSchema.optional(),
+  role: z.string(),
   createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
-export const CreateCommentSchema = z.object({
-  content: z.string().min(1).max(1000),
-});
-
-export const LikeResponseSchema = z.object({
-  liked: z.boolean(),
-});
-
-export const PostsListResponseSchema = z.object({
-  posts: z.array(PostSchema),
-  pagination: PaginationResponseSchema,
-});
-
-export const CommentsListResponseSchema = z.object({
-  comments: z.array(CommentSchema),
-  pagination: PaginationResponseSchema,
 });
 
 // ============================================
@@ -156,22 +83,10 @@ export const ReadyResponseSchema = z.object({
 // ============================================
 
 registry.register("User", UserSchema);
-registry.register("UserProfile", UserProfileSchema);
-registry.register("UserWithProfile", UserWithProfileSchema);
-registry.register("UserResponse", UserResponseSchema);
-registry.register("UpdateProfile", UpdateProfileSchema);
-registry.register("Post", PostSchema);
-registry.register("CreatePost", CreatePostSchema);
-registry.register("Comment", CommentSchema);
-registry.register("CreateComment", CreateCommentSchema);
-registry.register("PostsListResponse", PostsListResponseSchema);
-registry.register("CommentsListResponse", CommentsListResponseSchema);
+registry.register("Organization", OrganizationSchema);
+registry.register("Member", MemberSchema);
 registry.register("Pagination", PaginationSchema);
 registry.register("PaginationResponse", PaginationResponseSchema);
 registry.register("ErrorResponse", ErrorResponseSchema);
 registry.register("HealthResponse", HealthResponseSchema);
 registry.register("ReadyResponse", ReadyResponseSchema);
-registry.register("LikeResponse", LikeResponseSchema);
-registry.register("FollowResponse", FollowResponseSchema);
-registry.register("Follower", FollowerSchema);
-registry.register("Following", FollowingSchema);

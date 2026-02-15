@@ -4,27 +4,27 @@ import type { HonoContext } from "../types";
 
 const docsRouter = new Hono<HonoContext>();
 
-// Basic auth credentials (should be moved to env vars in production)
-const SWAGGER_USERNAME = "admin";
-const SWAGGER_PASSWORD = "yenzi-secret-2025";
-
-// Basic auth middleware
+// Basic auth middleware for Swagger UI
 const basicAuth = async (c: any, next: any) => {
   const authHeader = c.req.header("Authorization");
   
+  // In production, use environment variables for credentials
+  const username = c.env.SWAGGER_USERNAME || "admin";
+  const password = c.env.SWAGGER_PASSWORD || "admin";
+  
   if (!authHeader || !authHeader.startsWith("Basic ")) {
     return c.json({ error: "Unauthorized" }, 401, {
-      "WWW-Authenticate": 'Basic realm="Swagger UI"',
+      "WWW-Authenticate": 'Basic realm="API Documentation"',
     });
   }
   
   const base64Credentials = authHeader.split(" ")[1];
   const credentials = atob(base64Credentials);
-  const [username, password] = credentials.split(":");
+  const [providedUser, providedPass] = credentials.split(":");
   
-  if (username !== SWAGGER_USERNAME || password !== SWAGGER_PASSWORD) {
+  if (providedUser !== username || providedPass !== password) {
     return c.json({ error: "Unauthorized" }, 401, {
-      "WWW-Authenticate": 'Basic realm="Swagger UI"',
+      "WWW-Authenticate": 'Basic realm="API Documentation"',
     });
   }
   
@@ -38,7 +38,7 @@ docsRouter.get(
   Scalar({
     theme: "purple",
     url: "/api/v1/openapi.json",
-    pageTitle: "Yenzi API Documentation",
+    pageTitle: "API Documentation",
     layout: "classic",
   })
 );

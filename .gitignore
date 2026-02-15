@@ -1,25 +1,21 @@
-# prod
+# Production
+node_modules/
 dist/
+*.tsbuildinfo
 
-# dev
-.yarn/
-!.yarn/releases
-.vscode/*
-!.vscode/launch.json
-!.vscode/*.code-snippets
+# Development
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+.vscode/settings.json
 .idea/workspace.xml
 .idea/usage.statistics.xml
 .idea/shelf
+.wrangler/
 
-# deps
-node_modules/
-.wrangler
-
-# env
-.env
-.env.production
-
-# logs
+# Logs
 logs/
 *.log
 npm-debug.log*
@@ -28,7 +24,11 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# misc
+# Misc
 .DS_Store
+*.swp
+*.swo
+*~
 
+# Keep example env
 !.env.example
