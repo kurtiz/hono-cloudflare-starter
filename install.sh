@@ -32,19 +32,19 @@ print_header() {
 }
 
 print_success() {
-    echo -e "${GREEN}✓${NC} $1"
+    echo -e "${GREEN}✓${NC} $1" >&2
 }
 
 print_info() {
-    echo -e "${BLUE}ℹ${NC} $1"
+    echo -e "${BLUE}ℹ${NC} $1" >&2
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
+    echo -e "${YELLOW}⚠${NC} $1" >&2
 }
 
 print_error() {
-    echo -e "${RED}✗${NC} $1"
+    echo -e "${RED}✗${NC} $1" >&2
 }
 
 detect_shell() {
@@ -276,8 +276,19 @@ main() {
     local needs_mkdir=false
     local install_status
     
+    set +e
     install_dir=$(detect_install_dir)
     install_status=$?
+    set -e
+    
+    # If we need sudo but are in auto-confirm mode (non-interactive),
+    # fall back to user directory to avoid password prompt
+    if [ "$install_status" -eq 1 ] && [ "$AUTO_CONFIRM" = true ]; then
+        print_info "Sudo required for /usr/local/bin, falling back to user directory"
+        install_dir="$HOME/.local/bin"
+        install_status=2  # Need to create
+        needs_mkdir=true
+    fi
     
     case $install_status in
         1)
