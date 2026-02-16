@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
+import {z} from "zod";
+import {OpenAPIRegistry} from "@asteasolutions/zod-to-openapi";
 
 export const registry = new OpenAPIRegistry();
 
@@ -8,20 +8,20 @@ export const registry = new OpenAPIRegistry();
 // ============================================
 
 export const PaginationSchema = z.object({
-  page: z.number().min(1).default(1),
-  limit: z.number().min(1).max(50).default(20),
+    page: z.number().min(1).default(1),
+    limit: z.number().min(1).max(50).default(20),
 });
 
 export const PaginationResponseSchema = z.object({
-  page: z.number(),
-  limit: z.number(),
-  hasMore: z.boolean(),
+    page: z.number(),
+    limit: z.number(),
+    hasMore: z.boolean(),
 });
 
 export const ErrorResponseSchema = z.object({
-  error: z.string(),
-  code: z.string().optional(),
-  details: z.any().optional(),
+    error: z.string(),
+    code: z.string().optional(),
+    details: z.any().optional(),
 });
 
 // ============================================
@@ -29,16 +29,16 @@ export const ErrorResponseSchema = z.object({
 // ============================================
 
 export const UserSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  email: z.string().email(),
-  emailVerified: z.boolean(),
-  image: z.string().url().nullable().optional(),
-  username: z.string().nullable().optional(),
-  displayUsername: z.string().nullable().optional(),
-  role: z.string().nullable().optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+    id: z.string(),
+    name: z.string(),
+    email: z.email(),
+    emailVerified: z.boolean(),
+    image: z.url().nullable().optional(),
+    username: z.string().nullable().optional(),
+    displayUsername: z.string().nullable().optional(),
+    role: z.string().nullable().optional(),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
 });
 
 // ============================================
@@ -46,20 +46,20 @@ export const UserSchema = z.object({
 // ============================================
 
 export const OrganizationSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  slug: z.string(),
-  logo: z.string().url().nullable().optional(),
-  createdAt: z.string().datetime(),
-  metadata: z.string().nullable().optional(),
+    id: z.string(),
+    name: z.string(),
+    slug: z.string(),
+    logo: z.url().nullable().optional(),
+    createdAt: z.iso.datetime(),
+    metadata: z.string().nullable().optional(),
 });
 
 export const MemberSchema = z.object({
-  id: z.string(),
-  organizationId: z.string(),
-  userId: z.string(),
-  role: z.string(),
-  createdAt: z.string().datetime(),
+    id: z.string(),
+    organizationId: z.string(),
+    userId: z.string(),
+    role: z.string(),
+    createdAt: z.iso.datetime(),
 });
 
 // ============================================
@@ -67,15 +67,15 @@ export const MemberSchema = z.object({
 // ============================================
 
 export const HealthResponseSchema = z.object({
-  status: z.string(),
-  timestamp: z.string().datetime(),
-  version: z.string(),
-  environment: z.string(),
+    status: z.string(),
+    timestamp: z.iso.datetime(),
+    version: z.string(),
+    environment: z.string(),
 });
 
 export const ReadyResponseSchema = z.object({
-  ready: z.boolean(),
-  error: z.string().optional(),
+    ready: z.boolean(),
+    error: z.string().optional(),
 });
 
 // ============================================
