@@ -9,6 +9,12 @@ set -e
 SCRIPT_URL="https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/hono-cf"
 INSTALL_NAME="hono-cf"
 
+# Auto-detect if we're being piped (non-interactive)
+AUTO_CONFIRM=false
+if [ ! -t 0 ] || [ "$1" = "--yes" ] || [ "$1" = "-y" ]; then
+    AUTO_CONFIRM=true
+fi
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -289,8 +295,13 @@ main() {
     
     # Confirm installation
     echo ""
-    read -p "Install hono-cf to $install_dir? (Y/n): " -n 1 -r
-    echo ""
+    if [ "$AUTO_CONFIRM" = true ]; then
+        print_info "Auto-confirming installation (piped mode or --yes flag)"
+        REPLY="y"
+    else
+        read -p "Install hono-cf to $install_dir? (Y/n): " -n 1 -r
+        echo ""
+    fi
     
     if [[ $REPLY =~ ^[Nn]$ ]]; then
         print_info "Installation cancelled"
@@ -308,16 +319,21 @@ main() {
     if ! path_contains "$install_dir"; then
         echo ""
         print_warning "$install_dir is not in your PATH"
-        print_info "Would you like to add it to your shell configuration?"
         
-        read -p "Add to PATH? (Y/n): " -n 1 -r
-        echo ""
-        
-        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        if [ "$AUTO_CONFIRM" = true ]; then
+            print_info "Auto-adding to PATH (piped mode)"
             add_to_path "$install_dir" "$shell_name"
         else
-            print_info "You can manually add this to your PATH:"
-            echo "  export PATH=\"$install_dir:\$PATH\""
+            print_info "Would you like to add it to your shell configuration?"
+            read -p "Add to PATH? (Y/n): " -n 1 -r
+            echo ""
+            
+            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+                add_to_path "$install_dir" "$shell_name"
+            else
+                print_info "You can manually add this to your PATH:"
+                echo "  export PATH=\"$install_dir:\$PATH\""
+            fi
         fi
     fi
     
@@ -347,6 +363,13 @@ main() {
     # Remind to restart terminal if PATH was updated
     if ! path_contains "$install_dir"; then
         echo -e "${YELLOW}Note:${NC} You may need to restart your terminal or run 'source $(get_shell_config "$shell_name")' to use hono-cf"
+        echo ""
+    fi
+    
+    # Extra note for auto-confirm mode
+    if [ "$AUTO_CONFIRM" = true ]; then
+        echo -e "${CYAN}Tip:${NC} To use hono-cf right away, run:"
+        echo "  source $(get_shell_config "$shell_name")"
         echo ""
     fi
 }
