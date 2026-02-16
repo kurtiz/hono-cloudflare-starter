@@ -52,12 +52,25 @@ A production-ready authentication backend template built with **Hono**, **Better
 curl -fsSL https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/install.sh | bash
 ```
 
+![Made with VHS](https://vhs.charm.sh/vhs-480cWp77AXLgS2s78Xm7cF.gif)
+
+
 **What the installer does:**
 - Downloads the latest `hono-cf` CLI from GitHub
 - Detects your shell (bash, zsh, fish)
-- Installs to `/usr/local/bin` (with sudo) or `~/.local/bin`
+- Installs to `/usr/local/bin` (with sudo if available) or `~/.local/bin` (user directory)
+- Automatically falls back to user directory when running via `curl | bash` (no sudo password prompt)
 - Adds installation directory to your PATH
 - Verifies the installation
+
+**After installation:**
+```bash
+# Restart your terminal or source your shell config
+source ~/.zshrc  # or ~/.bashrc, ~/.config/fish/config.fish
+
+# Verify installation
+hono-cf --version
+```
 
 ### Create Your First Project
 
@@ -122,6 +135,20 @@ hono-cf uninstall
 
 # Work offline (skip update checks)
 hono-cf --offline create my-api
+```
+
+### Installation Script Options
+
+When using the install script, you can pass options:
+
+```bash
+# Default installation (auto-detects, falls back to user dir if needed)
+curl -fsSL https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/install.sh | bash
+
+# Force non-interactive mode (auto-confirm all prompts)
+curl -fsSL https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/install.sh | bash -s -- --yes
+# or
+./install.sh --yes
 ```
 
 ### Project Management
