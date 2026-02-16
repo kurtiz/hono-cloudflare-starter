@@ -41,7 +41,7 @@ A production-ready authentication backend template built with **Hono**, **Better
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) (v1.0+)
+- **Package Manager**: [Bun](https://bun.sh) (recommended), [pnpm](https://pnpm.io), [Yarn](https://yarnpkg.com), or [npm](https://nodejs.org)
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
 - PostgreSQL database (we recommend [Neon](https://neon.tech))
 
@@ -353,26 +353,26 @@ SWAGGER_PASSWORD=your_password
 
 ```bash
 # Generate migrations from schema changes
-bun run db:generate
+<pm> run db:generate
 
 # Push schema to database (development)
-bun run db:push
+<pm> run db:push
 
 # Run migrations (production)
-bun run db:migrate
+<pm> run db:migrate
 
 # Open Drizzle Studio
-bun run db:studio
+<pm> run db:studio
 ```
 
 ### Better Auth Schema
 
 ```bash
 # Generate Better Auth tables
-bun run auth:generate
+<pm> run auth:generate
 
 # Or use the Better Auth CLI
-bun run auth:migrate
+<pm> run auth:migrate
 ```
 
 ## Deployment
@@ -381,7 +381,13 @@ bun run auth:migrate
 
 1. **Install Wrangler and authenticate:**
    ```bash
-   bun install -g wrangler
+   # Using your package manager
+   bun install -g wrangler    # or: pnpm add -g wrangler
+   
+   # Or with npm
+   npm install -g wrangler
+   
+   # Authenticate
    wrangler login
    ```
 
@@ -394,7 +400,7 @@ bun run auth:migrate
 
 3. **Deploy:**
    ```bash
-   bun run deploy
+   <pm> run deploy
    ```
 
 ### Custom Domain (Optional)
@@ -545,11 +551,11 @@ psql "postgresql://..."
 
 ```bash
 # Regenerate types
-bun run cf-typegen
+<pm> run cf-typegen
 
 # Clear node_modules and reinstall
-rm -rf node_modules bun.lock
-bun install
+rm -rf node_modules bun.lock pnpm-lock.yaml yarn.lock package-lock.json
+<pm> install
 ```
 
 ### Deployment Failures
