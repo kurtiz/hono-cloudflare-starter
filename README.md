@@ -45,205 +45,185 @@ A production-ready authentication backend template built with **Hono**, **Better
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
 - PostgreSQL database (we recommend [Neon](https://neon.tech))
 
-### Option 1: Use the CLI Scaffolding Script (Recommended)
+### Install the CLI
 
 ```bash
-# Download and run directly from GitHub
-curl -fsSL https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/create-project.sh | bash -s my-api
-
-# Or with specific package manager
-curl -fsSL https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/create-project.sh | bash -s my-api --pm pnpm
+# Install hono-cf CLI globally
+curl -fsSL https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/install.sh | bash
 ```
 
-**Supports:** Bun, pnpm, Yarn, npm (auto-detected)
+**What the installer does:**
+- Downloads the latest `hono-cf` CLI from GitHub
+- Detects your shell (bash, zsh, fish)
+- Installs to `/usr/local/bin` (with sudo) or `~/.local/bin`
+- Adds installation directory to your PATH
+- Verifies the installation
 
-### Option 2: Manual Setup
+### Create Your First Project
 
 ```bash
-# Clone the repository
-git clone https://github.com/kurtiz/hono-cloudflare-starter.git my-project
-cd my-project
+# Create a new project
+hono-cf create my-api
 
-# Install dependencies (uses your preferred package manager)
-bun install    # or: pnpm install, yarn install, npm install
+# Or specify a package manager
+hono-cf create my-api --pm pnpm
+hono-cf create my-api --pm yarn
+hono-cf create my-api --pm npm
+```
 
-# Set up environment variables
+The CLI will:
+1. Clone the template from GitHub
+2. Detect or use your preferred package manager
+3. Install all dependencies
+4. Initialize a git repository
+5. Generate Cloudflare types
+6. Show you the next steps
+
+### Start Development
+
+```bash
+cd my-api
+
+# Copy environment template
 cp .env.example .env
 
-# Edit .env with your configuration
-# - Generate BETTER_AUTH_SECRET: openssl rand -base64 32
-# - Add your DATABASE_URL from Neon
+# Edit .env with your credentials:
+# - BETTER_AUTH_SECRET (generate: openssl rand -base64 32)
+# - DATABASE_URL (from Neon or other Postgres provider)
 
-# Generate auth schema and push to database
-# (replace <pm> with your package manager: bun, pnpm, yarn, npm)
-<pm> run auth:generate
-<pm> run db:push
+# Setup the database
+hono-cf run auth:generate  # Or: <pm> run auth:generate
+hono-cf run db:push        # Or: <pm> run db:push
 
-# Start development server
-<pm> run dev
+# Start the dev server
+hono-cf run dev            # Or: <pm> run dev
 ```
 
 Your API will be running at `http://localhost:8787`
 
-## CLI Tools
+## CLI Tool: `hono-cf`
 
-This template includes two powerful CLI tools to help you scaffold projects and generate code:
+The `hono-cf` CLI is your all-in-one tool for project management and code generation.
 
-### 1. `create-project.sh` - Project Scaffolding
-
-Creates a new project from the GitHub template with your preferred package manager.
-
-**Auto-detects package manager** (priority: bun → pnpm → yarn → npm)
-
-```bash
-# Download and run directly from GitHub
-curl -fsSL https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/create-project.sh | bash -s my-api
-
-# Or clone and run locally
-git clone https://github.com/kurtiz/hono-cloudflare-starter.git
-cd hono-cloudflare-starter
-./create-project.sh my-api
-
-# Specify package manager
-./create-project.sh my-api --pm pnpm
-./create-project.sh my-api --pm npm
-```
-
-**Features:**
-- Clones latest template from GitHub
-- Auto-detects available package managers
-- Installs all dependencies
-- Generates Cloudflare types
-- Initializes git repository
-- Shows next steps
-
-### 2. `hono-cf` - Code Generator
-
-A powerful CLI for generating boilerplate code within your project.
-
-#### Installation
-
-Add the CLI to your PATH or use it directly:
-
-```bash
-# Copy to your project
-cp /path/to/hono-cloudflare-starter/hono-cf ./
-
-# Or make it globally available
-sudo ln -s $(pwd)/hono-cf /usr/local/bin/hono-cf
-```
-
-#### Commands
+### Global Commands
 
 ```bash
 # Show help
 hono-cf --help
 
+# Check version and for updates
+hono-cf --version
+
+# Update to latest version
+hono-cf self-update
+
+# Uninstall hono-cf
+hono-cf uninstall
+
+# Work offline (skip update checks)
+hono-cf --offline create my-api
+```
+
+### Project Management
+
+```bash
 # Create a new project
-hono-cf create my-api
-hono-cf create my-api --pm yarn
+hono-cf create my-project
+hono-cf create my-project --pm pnpm
 
-# Generate code components
+# Work offline
+hono-cf --offline create my-project
+```
+
+### Code Generation
+
+Generate boilerplate code within your project:
+
+```bash
+# Routes (full CRUD)
 hono-cf generate route posts
-hono-cf generate schema projects
-hono-cf generate middleware logger
-hono-cf generate types product
-hono-cf generate service orders
-
-# Shorthand syntax
 hono-cf g route users
+
+# Database schemas
+hono-cf generate schema projects
 hono-cf g schema organizations
+
+# Middleware
+hono-cf generate middleware logger
 hono-cf g mw auth
-hono-cf g t customer
+
+# TypeScript types
+hono-cf generate types product
+hono-cf g types customer
+
+# Services (business logic)
+hono-cf generate service orders
 hono-cf g svc billing
 ```
 
-#### Generators
+#### Generators Explained
 
 **Route Generator** (`hono-cf g route <name>`)
 
-Generates a complete CRUD route file:
-
-```bash
-hono-cf g route posts
-```
-
-Creates `src/routes/posts.ts` with:
+Creates `src/routes/{name}.ts` with:
 - Full CRUD endpoints (GET, POST, PATCH, DELETE)
 - Zod validation schemas
 - Authentication middleware
 - TypeScript types
-- TODO comments for implementation
+- TODO comments
 
 **Schema Generator** (`hono-cf g schema <name>`)
 
-Generates a Drizzle schema file:
-
-```bash
-hono-cf g schema projects
-```
-
 Creates:
-- `src/db/schema/project.ts` - Table definition
-- `src/db/schema/types/project.ts` - TypeScript types
+- `src/db/schema/{name}.ts` - Drizzle table definition
+- `src/db/schema/types/{name}.ts` - TypeScript types
 - Updates `src/db/schema/index.ts` with exports
 
 **Middleware Generator** (`hono-cf g middleware <name>`)
 
-Generates custom middleware:
-
-```bash
-hono-cf g middleware rate-limit
-```
-
-Creates `src/middleware/rate-limit.ts` with:
+Creates `src/middleware/{name}.ts` with:
 - Standard middleware structure
 - Required and optional variants
 - Error handling
 
 **Types Generator** (`hono-cf g types <name>`)
 
-Generates TypeScript type definitions:
-
-```bash
-hono-cf g types product
-```
-
-Creates `src/types/product.ts` with:
-- Entity interface
-- Input types
-- Response types
-- Pagination support
+Creates `src/types/{name}.ts` with:
+- Entity interfaces
+- Input/output types
+- Response types with pagination support
 
 **Service Generator** (`hono-cf g service <name>`)
 
-Generates a service class for business logic:
-
-```bash
-hono-cf g service orders
-```
-
-Creates `src/services/order.ts` with:
+Creates `src/services/{name}.ts` with:
 - Service class with CRUD methods
 - Factory function
-- Database integration
-- TODOs for implementation
+- Database integration stubs
 
-#### Example Workflow
+### Example Workflow
 
 ```bash
-# Create new project
+# 1. Create project
 hono-cf create my-shop --pm pnpm
 cd my-shop
 
-# Generate code for your feature
+# 2. Setup database (edit .env first)
+# cp .env.example .env
+# # ... edit .env ...
+pnpm run auth:generate
+pnpm run db:push
+
+# 3. Generate code for your feature
 hono-cf g schema products
 hono-cf g route products
 hono-cf g types product
 hono-cf g service products
 
-# Register the route (manually add to src/routes/index.ts)
-# Then run the server
+# 4. Register route in src/routes/index.ts
+# import productsRouter from "./products";
+# apiRouter.route("/products", productsRouter);
+
+# 5. Start developing
 pnpm run dev
 ```
 
@@ -273,14 +253,15 @@ pnpm run dev
 │   │   ├── docs.ts          # Swagger UI
 │   │   ├── health.ts        # Health endpoints
 │   │   └── index.ts         # Route aggregator
-│   ├── types/               # TypeScript types
-│   │   └── index.ts
+│   ├── services/            # Business logic (generated)
+│   ├── types/               # TypeScript types (generated)
 │   ├── utils/               # Utility functions
 │   │   └── index.ts
 │   └── index.ts             # Application entry point
 ├── public/                   # Static assets
 ├── .env.example             # Environment template
-├── create-project.sh        # CLI scaffolding script
+├── install.sh               # CLI installer
+├── hono-cf                  # CLI tool (source)
 ├── drizzle.config.ts        # Drizzle configuration
 ├── package.json
 ├── tsconfig.json
@@ -457,6 +438,52 @@ All scripts work with **Bun, pnpm, Yarn, or npm**:
 | Generate types | `bun run cf-typegen` | `pnpm run cf-typegen` | `yarn cf-typegen` | `npm run cf-typegen` |
 | Type check | `bun run lint` | `pnpm run lint` | `yarn lint` | `npm run lint` |
 
+## CLI Tips & Tricks
+
+### Check for Updates
+
+The CLI automatically checks for updates (twice daily). You'll see a notification when a new version is available:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Update available: 1.0.0 → 1.1.0
+  Run: hono-cf self-update
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+### Work Offline
+
+Use `--offline` flag to skip update checks:
+
+```bash
+hono-cf --offline create my-api
+hono-cf --offline g route posts
+```
+
+### Self-Update
+
+```bash
+hono-cf self-update
+```
+
+This will:
+- Download the latest version from GitHub
+- Verify the download
+- Create a backup of the current version
+- Install the new version
+
+### Uninstall
+
+```bash
+hono-cf uninstall
+```
+
+This removes:
+- The CLI binary
+- Cache directory (~/.cache/hono-cf)
+
+You'll need to manually remove the PATH entry from your shell config if desired.
+
 ## Customization
 
 ### Adding New Routes
@@ -536,6 +563,19 @@ Export it from `src/db/schema/index.ts` and generate migrations.
 - **Session Management:** Secure, HTTP-only cookies
 
 ## Troubleshooting
+
+### CLI Installation Issues
+
+```bash
+# If hono-cf is not found after installation
+source ~/.bashrc  # or: source ~/.zshrc
+
+# Check if installation directory is in PATH
+echo $PATH | grep -E "(\.local/bin|/usr/local/bin)"
+
+# Reinstall with verbose output
+curl -fsSL https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/install.sh | bash
+```
 
 ### Database Connection Issues
 
