@@ -301,24 +301,24 @@ pnpm run dev
 
 All auth routes are automatically available at `/api/auth/*`:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/sign-up/email` | Register with email/password |
-| POST | `/api/auth/sign-in/email` | Login with email/password |
-| POST | `/api/auth/sign-out` | Logout |
-| GET | `/api/auth/session` | Get current session |
-| POST | `/api/auth/forget-password` | Request password reset |
-| POST | `/api/auth/verify-email` | Verify email address |
-| POST | `/api/auth/sign-in/social` | OAuth login (Google, GitHub, LinkedIn) |
+| Method | Endpoint                    | Description                            |
+|--------|-----------------------------|----------------------------------------|
+| POST   | `/api/auth/sign-up/email`   | Register with email/password           |
+| POST   | `/api/auth/sign-in/email`   | Login with email/password              |
+| POST   | `/api/auth/sign-out`        | Logout                                 |
+| GET    | `/api/auth/session`         | Get current session                    |
+| POST   | `/api/auth/forget-password` | Request password reset                 |
+| POST   | `/api/auth/verify-email`    | Verify email address                   |
+| POST   | `/api/auth/sign-in/social`  | OAuth login (Google, GitHub, LinkedIn) |
 
 ### Application Routes
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/health` | Health check |
-| GET | `/api/v1/health/ready` | Readiness check (DB connection) |
-| GET | `/api/v1/openapi.json` | OpenAPI specification |
-| GET | `/docs` | Swagger UI (basic auth protected) |
+| Method | Endpoint               | Description                       |
+|--------|------------------------|-----------------------------------|
+| GET    | `/api/v1/health`       | Health check                      |
+| GET    | `/api/v1/health/ready` | Readiness check (DB connection)   |
+| GET    | `/api/v1/openapi.json` | OpenAPI specification             |
+| GET    | `/docs`                | Swagger UI (basic auth protected) |
 
 ### Documentation
 
@@ -453,17 +453,17 @@ const response = await fetch("/api/v1/protected-route", {
 
 All scripts work with **Bun, pnpm, Yarn, or npm**:
 
-| Command | Bun | pnpm | Yarn | npm |
-|---------|-----|------|------|-----|
-| Start dev server | `bun dev` | `pnpm dev` | `yarn dev` | `npm run dev` |
-| Deploy | `bun run deploy` | `pnpm run deploy` | `yarn deploy` | `npm run deploy` |
-| Generate migrations | `bun run db:generate` | `pnpm run db:generate` | `yarn db:generate` | `npm run db:generate` |
-| Run migrations | `bun run db:migrate` | `pnpm run db:migrate` | `yarn db:migrate` | `npm run db:migrate` |
-| Push to DB | `bun run db:push` | `pnpm run db:push` | `yarn db:push` | `npm run db:push` |
-| Drizzle Studio | `bun run db:studio` | `pnpm run db:studio` | `yarn db:studio` | `npm run db:studio` |
-| Auth schema | `bun run auth:generate` | `pnpm run auth:generate` | `yarn auth:generate` | `npm run auth:generate` |
-| Generate types | `bun run cf-typegen` | `pnpm run cf-typegen` | `yarn cf-typegen` | `npm run cf-typegen` |
-| Type check | `bun run lint` | `pnpm run lint` | `yarn lint` | `npm run lint` |
+| Command             | Bun                     | pnpm                     | Yarn                 | npm                     |
+|---------------------|-------------------------|--------------------------|----------------------|-------------------------|
+| Start dev server    | `bun dev`               | `pnpm dev`               | `yarn dev`           | `npm run dev`           |
+| Deploy              | `bun run deploy`        | `pnpm run deploy`        | `yarn deploy`        | `npm run deploy`        |
+| Generate migrations | `bun run db:generate`   | `pnpm run db:generate`   | `yarn db:generate`   | `npm run db:generate`   |
+| Run migrations      | `bun run db:migrate`    | `pnpm run db:migrate`    | `yarn db:migrate`    | `npm run db:migrate`    |
+| Push to DB          | `bun run db:push`       | `pnpm run db:push`       | `yarn db:push`       | `npm run db:push`       |
+| Drizzle Studio      | `bun run db:studio`     | `pnpm run db:studio`     | `yarn db:studio`     | `npm run db:studio`     |
+| Auth schema         | `bun run auth:generate` | `pnpm run auth:generate` | `yarn auth:generate` | `npm run auth:generate` |
+| Generate types      | `bun run cf-typegen`    | `pnpm run cf-typegen`    | `yarn cf-typegen`    | `npm run cf-typegen`    |
+| Type check          | `bun run lint`          | `pnpm run lint`          | `yarn lint`          | `npm run lint`          |
 
 ## CLI Tips & Tricks
 
@@ -504,6 +504,8 @@ This will:
 ```bash
 hono-cf uninstall
 ```
+
+![Made with VHS](https://vhs.charm.sh/vhs-A2ytv45GsLE0ih6CKC6r0.gif)
 
 This removes:
 - The CLI binary
@@ -651,7 +653,7 @@ rm -rf node_modules bun.lock pnpm-lock.yaml yarn.lock package-lock.json
 
 ## License
 
-MIT License - feel free to use this for personal and commercial projects.
+MIT License – feel free to use this for personal and commercial projects.
 
 ## Support
 
