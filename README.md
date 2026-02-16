@@ -27,7 +27,8 @@ A production-ready authentication backend template built with **Hono**, **Better
 - **Developer Experience**
   - TypeScript throughout
   - Hot reload development
-  - CLI scaffolding tool
+  - Powerful CLI scaffolding tool
+  - Code generators for routes, schemas, middleware
   - Comprehensive error handling
   
 - **Production Ready**
@@ -44,29 +45,27 @@ A production-ready authentication backend template built with **Hono**, **Better
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
 - PostgreSQL database (we recommend [Neon](https://neon.tech))
 
-### Option 1: Use the CLI Scaffolding Script
+### Option 1: Use the CLI Scaffolding Script (Recommended)
 
 ```bash
-# Clone this template
-git clone https://github.com/yourusername/hono-cloudflare-starter.git
-cd hono-cloudflare-starter
+# Download and run directly from GitHub
+curl -fsSL https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/create-project.sh | bash -s my-api
 
-# Create a new project
-./create-project.sh my-awesome-api
-
-# Or with npx (when published)
-npx create-hono-cloudflare my-awesome-api
+# Or with specific package manager
+curl -fsSL https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/create-project.sh | bash -s my-api --pm pnpm
 ```
+
+**Supports:** Bun, pnpm, Yarn, npm (auto-detected)
 
 ### Option 2: Manual Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/hono-cloudflare-starter.git my-project
+git clone https://github.com/kurtiz/hono-cloudflare-starter.git my-project
 cd my-project
 
-# Install dependencies
-bun install
+# Install dependencies (uses your preferred package manager)
+bun install    # or: pnpm install, yarn install, npm install
 
 # Set up environment variables
 cp .env.example .env
@@ -76,14 +75,177 @@ cp .env.example .env
 # - Add your DATABASE_URL from Neon
 
 # Generate auth schema and push to database
-bun run auth:generate
-bun run db:push
+# (replace <pm> with your package manager: bun, pnpm, yarn, npm)
+<pm> run auth:generate
+<pm> run db:push
 
 # Start development server
-bun run dev
+<pm> run dev
 ```
 
 Your API will be running at `http://localhost:8787`
+
+## CLI Tools
+
+This template includes two powerful CLI tools to help you scaffold projects and generate code:
+
+### 1. `create-project.sh` - Project Scaffolding
+
+Creates a new project from the GitHub template with your preferred package manager.
+
+**Auto-detects package manager** (priority: bun → pnpm → yarn → npm)
+
+```bash
+# Download and run directly from GitHub
+curl -fsSL https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/create-project.sh | bash -s my-api
+
+# Or clone and run locally
+git clone https://github.com/kurtiz/hono-cloudflare-starter.git
+cd hono-cloudflare-starter
+./create-project.sh my-api
+
+# Specify package manager
+./create-project.sh my-api --pm pnpm
+./create-project.sh my-api --pm npm
+```
+
+**Features:**
+- Clones latest template from GitHub
+- Auto-detects available package managers
+- Installs all dependencies
+- Generates Cloudflare types
+- Initializes git repository
+- Shows next steps
+
+### 2. `hono-cf` - Code Generator
+
+A powerful CLI for generating boilerplate code within your project.
+
+#### Installation
+
+Add the CLI to your PATH or use it directly:
+
+```bash
+# Copy to your project
+cp /path/to/hono-cloudflare-starter/hono-cf ./
+
+# Or make it globally available
+sudo ln -s $(pwd)/hono-cf /usr/local/bin/hono-cf
+```
+
+#### Commands
+
+```bash
+# Show help
+hono-cf --help
+
+# Create a new project
+hono-cf create my-api
+hono-cf create my-api --pm yarn
+
+# Generate code components
+hono-cf generate route posts
+hono-cf generate schema projects
+hono-cf generate middleware logger
+hono-cf generate types product
+hono-cf generate service orders
+
+# Shorthand syntax
+hono-cf g route users
+hono-cf g schema organizations
+hono-cf g mw auth
+hono-cf g t customer
+hono-cf g svc billing
+```
+
+#### Generators
+
+**Route Generator** (`hono-cf g route <name>`)
+
+Generates a complete CRUD route file:
+
+```bash
+hono-cf g route posts
+```
+
+Creates `src/routes/posts.ts` with:
+- Full CRUD endpoints (GET, POST, PATCH, DELETE)
+- Zod validation schemas
+- Authentication middleware
+- TypeScript types
+- TODO comments for implementation
+
+**Schema Generator** (`hono-cf g schema <name>`)
+
+Generates a Drizzle schema file:
+
+```bash
+hono-cf g schema projects
+```
+
+Creates:
+- `src/db/schema/project.ts` - Table definition
+- `src/db/schema/types/project.ts` - TypeScript types
+- Updates `src/db/schema/index.ts` with exports
+
+**Middleware Generator** (`hono-cf g middleware <name>`)
+
+Generates custom middleware:
+
+```bash
+hono-cf g middleware rate-limit
+```
+
+Creates `src/middleware/rate-limit.ts` with:
+- Standard middleware structure
+- Required and optional variants
+- Error handling
+
+**Types Generator** (`hono-cf g types <name>`)
+
+Generates TypeScript type definitions:
+
+```bash
+hono-cf g types product
+```
+
+Creates `src/types/product.ts` with:
+- Entity interface
+- Input types
+- Response types
+- Pagination support
+
+**Service Generator** (`hono-cf g service <name>`)
+
+Generates a service class for business logic:
+
+```bash
+hono-cf g service orders
+```
+
+Creates `src/services/order.ts` with:
+- Service class with CRUD methods
+- Factory function
+- Database integration
+- TODOs for implementation
+
+#### Example Workflow
+
+```bash
+# Create new project
+hono-cf create my-shop --pm pnpm
+cd my-shop
+
+# Generate code for your feature
+hono-cf g schema products
+hono-cf g route products
+hono-cf g types product
+hono-cf g service products
+
+# Register the route (manually add to src/routes/index.ts)
+# Then run the server
+pnpm run dev
+```
 
 ## Project Structure
 
@@ -275,17 +437,19 @@ const response = await fetch("/api/v1/protected-route", {
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `bun run dev` | Start development server |
-| `bun run deploy` | Deploy to Cloudflare Workers |
-| `bun run db:generate` | Generate Drizzle migrations |
-| `bun run db:migrate` | Run migrations |
-| `bun run db:push` | Push schema to database |
-| `bun run db:studio` | Open Drizzle Studio |
-| `bun run auth:generate` | Generate Better Auth schema |
-| `bun run cf-typegen` | Generate Cloudflare types |
-| `bun run lint` | Type check TypeScript |
+All scripts work with **Bun, pnpm, Yarn, or npm**:
+
+| Command | Bun | pnpm | Yarn | npm |
+|---------|-----|------|------|-----|
+| Start dev server | `bun dev` | `pnpm dev` | `yarn dev` | `npm run dev` |
+| Deploy | `bun run deploy` | `pnpm run deploy` | `yarn deploy` | `npm run deploy` |
+| Generate migrations | `bun run db:generate` | `pnpm run db:generate` | `yarn db:generate` | `npm run db:generate` |
+| Run migrations | `bun run db:migrate` | `pnpm run db:migrate` | `yarn db:migrate` | `npm run db:migrate` |
+| Push to DB | `bun run db:push` | `pnpm run db:push` | `yarn db:push` | `npm run db:push` |
+| Drizzle Studio | `bun run db:studio` | `pnpm run db:studio` | `yarn db:studio` | `npm run db:studio` |
+| Auth schema | `bun run auth:generate` | `pnpm run auth:generate` | `yarn auth:generate` | `npm run auth:generate` |
+| Generate types | `bun run cf-typegen` | `pnpm run cf-typegen` | `yarn cf-typegen` | `npm run cf-typegen` |
+| Type check | `bun run lint` | `pnpm run lint` | `yarn lint` | `npm run lint` |
 
 ## Customization
 

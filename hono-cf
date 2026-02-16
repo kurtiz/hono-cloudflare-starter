@@ -1,0 +1,751 @@
+#!/usr/bin/env bash
+
+# Hono Cloudflare CLI - Code Generator Tool
+# Usage: hono-cf <command> [options]
+#
+# Commands:
+#   create <name>          Create a new project from template
+#   generate, g <type>     Generate code (route, schema, middleware, types)
+#   --help, -h             Show help
+#
+# Examples:
+#   hono-cf create my-api --pm pnpm
+#   hono-cf generate route posts
+#   hono-cf g schema projects
+#   hono-cf g middleware logger
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(pwd)"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+NC='\033[0m'
+
+# ============================================
+# UTILITY FUNCTIONS
+# ============================================
+
+print_header() {
+    echo -e "${CYAN}"
+    echo "╔══════════════════════════════════════════════════════════╗"
+    echo "║              Hono Cloudflare CLI (hono-cf)               ║"
+    echo "╚══════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_info() {
+    echo -e "${BLUE}ℹ${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+detect_package_manager() {
+    if [ -f "bun.lockb" ] || [ -f "bun.lock" ]; then
+        echo "bun"
+    elif [ -f "pnpm-lock.yaml" ]; then
+        echo "pnpm"
+    elif [ -f "yarn.lock" ]; then
+        echo "yarn"
+    elif [ -f "package-lock.json" ]; then
+        echo "npm"
+    elif command -v bun &> /dev/null; then
+        echo "bun"
+    elif command -v pnpm &> /dev/null; then
+        echo "pnpm"
+    elif command -v yarn &> /dev/null; then
+        echo "yarn"
+    else
+        echo "npm"
+    fi
+}
+
+get_run_command() {
+    local pm="$1"
+    local script="$2"
+    case "$pm" in
+        "bun") echo "bun run $script" ;;
+        "pnpm") echo "pnpm run $script" ;;
+        "yarn") echo "yarn $script" ;;
+        *) echo "npm run $script" ;;
+    esac
+}
+
+# ============================================
+# CREATE COMMAND
+# ============================================
+
+cmd_create() {
+    local project_name=""
+    local package_manager=""
+    
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --pm)
+                package_manager="$2"
+                shift 2
+                ;;
+            --help|-h)
+                show_create_help
+                exit 0
+                ;;
+            -*)
+                print_error "Unknown option: $1"
+                show_create_help
+                exit 1
+                ;;
+            *)
+                if [ -z "$project_name" ]; then
+                    project_name="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+    
+    if [ -z "$project_name" ]; then
+        print_error "Project name is required"
+        show_create_help
+        exit 1
+    fi
+    
+    # Check if create-project.sh exists in current directory
+    if [ -f "$SCRIPT_DIR/create-project.sh" ]; then
+        if [ -n "$package_manager" ]; then
+            "$SCRIPT_DIR/create-project.sh" "$project_name" --pm "$package_manager"
+        else
+            "$SCRIPT_DIR/create-project.sh" "$project_name"
+        fi
+    else
+        # Download and run the script
+        print_info "Downloading project generator..."
+        local temp_script="/tmp/hono-cf-create-$$.sh"
+        curl -fsSL "https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/create-project.sh" -o "$temp_script"
+        chmod +x "$temp_script"
+        
+        if [ -n "$package_manager" ]; then
+            "$temp_script" "$project_name" --pm "$package_manager"
+        else
+            "$temp_script" "$project_name"
+        fi
+        
+        rm -f "$temp_script"
+    fi
+}
+
+show_create_help() {
+    echo "Usage: hono-cf create <project-name> [options]"
+    echo ""
+    echo "Create a new Hono Cloudflare project from template"
+    echo ""
+    echo "Options:"
+    echo "  --pm <pm>    Package manager (bun, pnpm, yarn, npm)"
+    echo ""
+    echo "Examples:"
+    echo "  hono-cf create my-api"
+    echo "  hono-cf create my-api --pm pnpm"
+}
+
+# ============================================
+# GENERATE COMMAND
+# ============================================
+
+cmd_generate() {
+    local type="$1"
+    local name="$2"
+    shift 2
+    
+    if [ -z "$type" ] || [ -z "$name" ]; then
+        show_generate_help
+        exit 1
+    fi
+    
+    # Validate we're in a Hono project
+    if [ ! -f "package.json" ] || [ ! -d "src" ]; then
+        print_error "Not a Hono Cloudflare project. Run this from your project root."
+        exit 1
+    fi
+    
+    case "$type" in
+        route|r)
+            generate_route "$name" "$@"
+            ;;
+        schema|s)
+            generate_schema "$name" "$@"
+            ;;
+        middleware|mw)
+            generate_middleware "$name" "$@"
+            ;;
+        types|t)
+            generate_types "$name" "$@"
+            ;;
+        service|svc)
+            generate_service "$name" "$@"
+            ;;
+        *)
+            print_error "Unknown generator type: $type"
+            show_generate_help
+            exit 1
+            ;;
+    esac
+}
+
+show_generate_help() {
+    echo "Usage: hono-cf generate <type> <name> [options]"
+    echo "       hono-cf g <type> <name> [options]"
+    echo ""
+    echo "Generate code boilerplate"
+    echo ""
+    echo "Types:"
+    echo "  route, r        Generate a route file"
+    echo "  schema, s       Generate a database schema"
+    echo "  middleware, mw  Generate middleware"
+    echo "  types, t        Generate TypeScript types"
+    echo "  service, svc    Generate a service file"
+    echo ""
+    echo "Examples:"
+    echo "  hono-cf generate route posts"
+    echo "  hono-cf g schema projects"
+    echo "  hono-cf g middleware auth"
+    echo "  hono-cf g types product"
+}
+
+# ============================================
+# GENERATORS
+# ============================================
+
+generate_route() {
+    local name="$1"
+    local route_file="src/routes/${name}.ts"
+    
+    if [ -f "$route_file" ]; then
+        print_error "Route already exists: $route_file"
+        exit 1
+    fi
+    
+    mkdir -p "src/routes"
+    
+    cat > "$route_file" << 'EOF'
+import { Hono } from "hono";
+import { zValidator } from "@hono/zod-validator";
+import { z } from "zod";
+import { requireAuth } from "../middleware/auth";
+import type { HonoContext } from "../types";
+
+const {{NAME}}Router = new Hono<HonoContext>();
+
+// Validation schemas
+const createSchema = z.object({
+  // Add your validation schema here
+  name: z.string().min(1).max(100),
+  description: z.string().optional(),
+});
+
+const updateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().optional(),
+});
+
+// GET /api/v1/{{NAME}} - List all
+{{NAME}}Router.get("/", async (c) => {
+  const db = c.get("db");
+  
+  // TODO: Implement list logic
+  // Example:
+  // const items = await db.select().from({{NAME}}).all();
+  
+  return c.json({
+    message: "List {{NAME}}",
+    items: [],
+  });
+});
+
+// GET /api/v1/{{NAME}}/:id - Get one
+{{NAME}}Router.get("/:id", async (c) => {
+  const id = c.req.param("id");
+  const db = c.get("db");
+  
+  // TODO: Implement get logic
+  
+  return c.json({
+    message: "Get {{NAME}}",
+    id,
+  });
+});
+
+// POST /api/v1/{{NAME}} - Create
+{{NAME}}Router.post("/", requireAuth, zValidator("json", createSchema), async (c) => {
+  const data = c.req.valid("json");
+  const db = c.get("db");
+  const session = c.get("session");
+  
+  // TODO: Implement create logic
+  // Example:
+  // const [item] = await db.insert({{NAME}}).values({
+  //   ...data,
+  //   userId: session!.user.id,
+  // }).returning();
+  
+  return c.json({
+    message: "Create {{NAME}}",
+    data,
+  }, 201);
+});
+
+// PATCH /api/v1/{{NAME}}/:id - Update
+{{NAME}}Router.patch("/:id", requireAuth, zValidator("json", updateSchema), async (c) => {
+  const id = c.req.param("id");
+  const data = c.req.valid("json");
+  const db = c.get("db");
+  
+  // TODO: Implement update logic
+  
+  return c.json({
+    message: "Update {{NAME}}",
+    id,
+    data,
+  });
+});
+
+// DELETE /api/v1/{{NAME}}/:id - Delete
+{{NAME}}Router.delete("/:id", requireAuth, async (c) => {
+  const id = c.req.param("id");
+  const db = c.get("db");
+  
+  // TODO: Implement delete logic
+  
+  return c.json({
+    message: "Delete {{NAME}}",
+    id,
+  });
+});
+
+export default {{NAME}}Router;
+EOF
+
+    # Replace placeholder
+    sed -i.bak "s/{{NAME}}/${name}/g" "$route_file"
+    rm -f "$route_file.bak"
+    
+    print_success "Created route: ${route_file}"
+    print_info "Don't forget to register the route in src/routes/index.ts:"
+    echo ""
+    echo -e "${CYAN}  import ${name}Router from \"./${name}\";${NC}"
+    echo -e "${CYAN}  apiRouter.route(\"/api/v1/${name}\", ${name}Router);${NC}"
+    echo ""
+}
+
+generate_schema() {
+    local name="$1"
+    local singular="${name%s}"  # Remove trailing 's' if present
+    local schema_file="src/db/schema/${singular}.ts"
+    local types_file="src/db/schema/types/${singular}.ts"
+    
+    if [ -f "$schema_file" ]; then
+        print_error "Schema already exists: $schema_file"
+        exit 1
+    fi
+    
+    mkdir -p "src/db/schema/types"
+    
+    # Create schema file
+    cat > "$schema_file" << 'EOF'
+import {
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  boolean,
+} from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { user } from "./auth";
+
+// ============================================
+// {{NAME}} Table
+// ============================================
+
+export const {{NAME}} = pgTable("{{TABLE_NAME}}", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
+// ============================================
+// {{NAME}} Relations
+// ============================================
+
+export const {{NAME}}Relations = relations({{NAME}}, ({ one }) => ({
+  user: one(user, {
+    fields: [{{NAME}}.userId],
+    references: [user.id],
+  }),
+}));
+EOF
+
+    # Replace placeholders
+    sed -i.bak "s/{{NAME}}/${singular}/g" "$schema_file"
+    sed -i.bak "s/{{TABLE_NAME}}/${singular}s/g" "$schema_file"
+    rm -f "$schema_file.bak"
+    
+    # Create types file
+    cat > "$types_file" << 'EOF'
+import { {{NAME}} } from "../{{NAME}}";
+
+export type {{NAME}} = typeof {{NAME}}.$inferSelect;
+export type New{{NAME}} = typeof {{NAME}}.$inferInsert;
+EOF
+
+    sed -i.bak "s/{{NAME}}/${singular}/g" "$types_file"
+    rm -f "$types_file.bak"
+    
+    # Update index.ts to export the new schema
+    local index_file="src/db/schema/index.ts"
+    if [ -f "$index_file" ]; then
+        # Add export for schema
+        if ! grep -q "from \"./${singular}\"" "$index_file"; then
+            # Find the last export line and add after it
+            sed -i.bak "/^export {/a\\\n// ${singular} schema\nexport {\n  ${singular},\n  ${singular}Relations,\n} from \"./${singular}\";" "$index_file"
+            rm -f "$index_file.bak"
+        fi
+        
+        # Add export for types
+        if ! grep -q "from \"./types/${singular}\"" "$index_file"; then
+            sed -i.bak "/^export type {/a\\\nexport type {\n  {{NAME}},\n  New{{NAME}},\n} from \"./types/${singular}\";" "$index_file"
+            sed -i.bak "s/{{NAME}}/${singular}/g" "$index_file"
+            rm -f "$index_file.bak"
+        fi
+    fi
+    
+    print_success "Created schema: ${schema_file}"
+    print_success "Created types: ${types_file}"
+    print_info "Run the following to update your database:"
+    echo ""
+    local pm
+    pm=$(detect_package_manager)
+    echo -e "${CYAN}  $(get_run_command "$pm" "db:generate")${NC}"
+    echo -e "${CYAN}  $(get_run_command "$pm" "db:push")${NC}"
+    echo ""
+}
+
+generate_middleware() {
+    local name="$1"
+    local middleware_file="src/middleware/${name}.ts"
+    
+    if [ -f "$middleware_file" ]; then
+        print_error "Middleware already exists: $middleware_file"
+        exit 1
+    fi
+    
+    mkdir -p "src/middleware"
+    
+    cat > "$middleware_file" << 'EOF'
+import { createMiddleware } from "hono/factory";
+import { HTTPException } from "hono/http-exception";
+import type { HonoContext } from "../types";
+
+/**
+ * {{NAME}} middleware
+ * 
+ * TODO: Implement your middleware logic
+ */
+export const {{NAME}}Middleware = createMiddleware<HonoContext>(async (c, next) => {
+  // Add your middleware logic here
+  // Example: Check headers, validate tokens, etc.
+  
+  const header = c.req.header("X-Custom-Header");
+  
+  if (!header) {
+    throw new HTTPException(400, { 
+      message: "Missing required header: X-Custom-Header" 
+    });
+  }
+  
+  // Store data in context for later use
+  c.set("{{NAME}}Data", header);
+  
+  await next();
+});
+
+/**
+ * Optional {{NAME}} middleware
+ * Doesn't throw if validation fails
+ */
+export const optional{{NAME}}Middleware = createMiddleware<HonoContext>(async (c, next) => {
+  const header = c.req.header("X-Custom-Header");
+  
+  if (header) {
+    c.set("{{NAME}}Data", header);
+  }
+  
+  await next();
+});
+EOF
+
+    sed -i.bak "s/{{NAME}}/${name}/g" "$middleware_file"
+    rm -f "$middleware_file.bak"
+    
+    print_success "Created middleware: ${middleware_file}"
+    print_info "Import and use in your routes:"
+    echo ""
+    echo -e "${CYAN}  import { ${name}Middleware } from \"../middleware/${name}\";${NC}"
+    echo -e "${CYAN}  router.use(${name}Middleware);${NC}"
+    echo ""
+}
+
+generate_types() {
+    local name="$1"
+    local singular="${name%s}"
+    local types_file="src/types/${singular}.ts"
+    
+    if [ -f "$types_file" ]; then
+        print_error "Types file already exists: $types_file"
+        exit 1
+    fi
+    
+    mkdir -p "src/types"
+    
+    cat > "$types_file" << 'EOF'
+/**
+ * {{NAME}} types
+ */
+
+export interface {{NAME}} {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Create{{NAME}}Input {
+  name: string;
+  description?: string;
+}
+
+export interface Update{{NAME}}Input {
+  name?: string;
+  description?: string;
+}
+
+export interface {{NAME}}Response {
+  success: boolean;
+  data?: {{NAME}};
+  error?: string;
+}
+
+export interface {{NAME}}ListResponse {
+  success: boolean;
+  data: {{NAME}}[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+  };
+}
+EOF
+
+    sed -i.bak "s/{{NAME}}/${singular}/g" "$types_file"
+    rm -f "$types_file.bak"
+    
+    print_success "Created types: ${types_file}"
+    print_info "Import in your files:"
+    echo ""
+    echo -e "${CYAN}  import type { ${singular} } from \"../types/${singular}\";${NC}"
+    echo ""
+}
+
+generate_service() {
+    local name="$1"
+    local singular="${name%s}"
+    local service_file="src/services/${singular}.ts"
+    
+    if [ -f "$service_file" ]; then
+        print_error "Service already exists: $service_file"
+        exit 1
+    fi
+    
+    mkdir -p "src/services"
+    
+    cat > "$service_file" << 'EOF'
+import type { DB } from "../db";
+
+/**
+ * {{NAME}} Service
+ * 
+ * Business logic for {{NAME}} operations
+ */
+export class {{NAME}}Service {
+  constructor(private db: DB) {}
+
+  /**
+   * Find all {{NAME}}s
+   */
+  async findAll() {
+    // TODO: Implement find all
+    // return await this.db.query.{{NAME}}.findMany();
+    return [];
+  }
+
+  /**
+   * Find {{NAME}} by ID
+   */
+  async findById(id: string) {
+    // TODO: Implement find by ID
+    // return await this.db.query.{{NAME}}.findFirst({
+    //   where: (table, { eq }) => eq(table.id, id),
+    // });
+    return null;
+  }
+
+  /**
+   * Create {{NAME}}
+   */
+  async create(data: { name: string; description?: string; userId: string }) {
+    // TODO: Implement create
+    // const [item] = await this.db.insert({{NAME}}).values(data).returning();
+    // return item;
+    return { id: "", ...data };
+  }
+
+  /**
+   * Update {{NAME}}
+   */
+  async update(id: string, data: { name?: string; description?: string }) {
+    // TODO: Implement update
+    // const [item] = await this.db
+    //   .update({{NAME}})
+    //   .set(data)
+    //   .where(eq({{NAME}}.id, id))
+    //   .returning();
+    // return item;
+    return { id, ...data };
+  }
+
+  /**
+   * Delete {{NAME}}
+   */
+  async delete(id: string) {
+    // TODO: Implement delete
+    // await this.db.delete({{NAME}}).where(eq({{NAME}}.id, id));
+    return { success: true };
+  }
+}
+
+/**
+ * Factory function to create {{NAME}} service
+ */
+export function create{{NAME}}Service(db: DB) {
+  return new {{NAME}}Service(db);
+}
+EOF
+
+    sed -i.bak "s/{{NAME}}/${singular}/g" "$service_file"
+    rm -f "$service_file.bak"
+    
+    print_success "Created service: ${service_file}"
+    print_info "Use in your routes:"
+    echo ""
+    echo -e "${CYAN}  import { create${singular}Service } from \"../services/${singular}\";${NC}"
+    echo -e "${CYAN}  const service = create${singular}Service(db);${NC}"
+    echo ""
+}
+
+# ============================================
+# MAIN
+# ============================================
+
+show_help() {
+    print_header
+    echo "A CLI tool for Hono Cloudflare Starter"
+    echo ""
+    echo -e "${CYAN}USAGE:${NC}"
+    echo "  hono-cf <command> [options]"
+    echo ""
+    echo -e "${CYAN}COMMANDS:${NC}"
+    echo ""
+    echo "  create <name>              Create a new project"
+    echo "    Options:"
+    echo "      --pm <pm>              Package manager (bun, pnpm, yarn, npm)"
+    echo ""
+    echo "  generate, g <type> <name>  Generate code boilerplate"
+    echo "    Types:"
+    echo "      route, r               Generate route file"
+    echo "      schema, s              Generate database schema"
+    echo "      middleware, mw         Generate middleware"
+    echo "      types, t               Generate TypeScript types"
+    echo "      service, svc           Generate service file"
+    echo ""
+    echo -e "${CYAN}EXAMPLES:${NC}"
+    echo ""
+    echo "  # Create a new project"
+    echo "  hono-cf create my-api"
+    echo "  hono-cf create my-api --pm pnpm"
+    echo ""
+    echo "  # Generate code"
+    echo "  hono-cf generate route posts"
+    echo "  hono-cf g schema projects"
+    echo "  hono-cf g middleware logger"
+    echo "  hono-cf g types product"
+    echo "  hono-cf g service orders"
+    echo ""
+    echo -e "${CYAN}DOCUMENTATION:${NC}"
+    echo "  https://github.com/kurtiz/hono-cloudflare-starter"
+    echo ""
+}
+
+main() {
+    local command="$1"
+    
+    if [ -z "$command" ] || [ "$command" = "--help" ] || [ "$command" = "-h" ]; then
+        show_help
+        exit 0
+    fi
+    
+    shift
+    
+    case "$command" in
+        create)
+            cmd_create "$@"
+            ;;
+        generate|g)
+            cmd_generate "$@"
+            ;;
+        --version|-v)
+            echo "hono-cf v1.0.0"
+            ;;
+        *)
+            print_error "Unknown command: $command"
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
