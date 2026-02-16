@@ -1,23 +1,40 @@
 #!/usr/bin/env bash
 
 # Hono Cloudflare CLI - Code Generator Tool
+# Version: 1.0.0
+# 
 # Usage: hono-cf <command> [options]
 #
 # Commands:
 #   create <name>          Create a new project from template
 #   generate, g <type>     Generate code (route, schema, middleware, types)
+#   self-update            Update hono-cf to the latest version
+#   uninstall              Remove hono-cf from your system
 #   --help, -h             Show help
+#   --version, -v          Show version
+#   --offline              Skip update checks (for all commands)
 #
 # Examples:
 #   hono-cf create my-api --pm pnpm
 #   hono-cf generate route posts
 #   hono-cf g schema projects
-#   hono-cf g middleware logger
+#   hono-cf self-update
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(pwd)"
+# ============================================
+# CONFIGURATION
+# ============================================
+
+# Version (must be on line 5 for update checker)
+HONO_CF_VERSION="1.0.0"
+TEMPLATE_REPO="https://github.com/kurtiz/hono-cloudflare-starter.git"
+REMOTE_SCRIPT_URL="https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/hono-cf"
+
+# Cache settings
+CACHE_DIR="${HOME}/.cache/hono-cf"
+LAST_CHECK_FILE="${CACHE_DIR}/last-update-check"
+CACHE_DURATION=$((12 * 3600))  # 12 hours in seconds
 
 # Colors
 RED='\033[0;31m'
@@ -27,6 +44,9 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'
 NC='\033[0m'
+
+# Flags
+OFFLINE_MODE=false
 
 # ============================================
 # UTILITY FUNCTIONS
@@ -56,6 +76,86 @@ print_error() {
     echo -e "${RED}✗${NC} $1"
 }
 
+# ============================================
+# INTERNET & UPDATE CHECKING
+# ============================================
+
+check_internet_connection() {
+    # Try to reach GitHub with a simple HEAD request
+    # Timeout after 5 seconds
+    if curl -fsSL --max-time 5 -I "$REMOTE_SCRIPT_URL" > /dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+get_remote_version() {
+    # Get the version from the first few lines of the remote script
+    # This avoids downloading the entire file
+    curl -fsSL --max-time 10 "$REMOTE_SCRIPT_URL" 2>/dev/null | head -10 | grep -E "^# Version:" | sed 's/^# Version: //'
+}
+
+should_check_for_updates() {
+    # Check if we're in offline mode
+    if [ "$OFFLINE_MODE" = true ]; then
+        return 1
+    fi
+    
+    # Create cache directory if it doesn't exist
+    mkdir -p "$CACHE_DIR"
+    
+    # Check if we've checked recently
+    if [ -f "$LAST_CHECK_FILE" ]; then
+        local last_check
+        local current_time
+        last_check=$(cat "$LAST_CHECK_FILE")
+        current_time=$(date +%s)
+        
+        if [ $((current_time - last_check)) -lt "$CACHE_DURATION" ]; then
+            return 1  # Don't check yet
+        fi
+    fi
+    
+    return 0  # Should check
+}
+
+check_for_updates() {
+    if ! should_check_for_updates; then
+        return 0
+    fi
+    
+    # Update last check time
+    date +%s > "$LAST_CHECK_FILE"
+    
+    # Check internet connection
+    if ! check_internet_connection; then
+        return 0  # Silently skip if offline
+    fi
+    
+    # Get remote version
+    local remote_version
+    remote_version=$(get_remote_version)
+    
+    if [ -z "$remote_version" ]; then
+        return 0  # Silently skip if can't get version
+    fi
+    
+    # Compare versions (simple string comparison)
+    if [ "$remote_version" != "$HONO_CF_VERSION" ]; then
+        echo ""
+        echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${YELLOW}  Update available: ${HONO_CF_VERSION} → ${remote_version}${NC}"
+        echo -e "${YELLOW}  Run: hono-cf self-update${NC}"
+        echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+    fi
+}
+
+# ============================================
+# PACKAGE MANAGER UTILITIES
+# ============================================
+
 detect_package_manager() {
     if [ -f "bun.lockb" ] || [ -f "bun.lock" ]; then
         echo "bun"
@@ -76,6 +176,27 @@ detect_package_manager() {
     fi
 }
 
+get_install_command() {
+    local pm="$1"
+    case "$pm" in
+        "bun")
+            echo "bun install"
+            ;;
+        "pnpm")
+            echo "pnpm install"
+            ;;
+        "yarn")
+            echo "yarn install"
+            ;;
+        "npm")
+            echo "npm install"
+            ;;
+        *)
+            echo "npm install"
+            ;;
+    esac
+}
+
 get_run_command() {
     local pm="$1"
     local script="$2"
@@ -87,8 +208,30 @@ get_run_command() {
     esac
 }
 
+get_global_install_command() {
+    local pm="$1"
+    local pkg="$2"
+    case "$pm" in
+        "bun")
+            echo "bun install -g $pkg"
+            ;;
+        "pnpm")
+            echo "pnpm add -g $pkg"
+            ;;
+        "yarn")
+            echo "yarn global add $pkg"
+            ;;
+        "npm")
+            echo "npm install -g $pkg"
+            ;;
+        *)
+            echo "npm install -g $pkg"
+            ;;
+    esac
+}
+
 # ============================================
-# CREATE COMMAND
+# CREATE PROJECT COMMAND
 # ============================================
 
 cmd_create() {
@@ -126,28 +269,156 @@ cmd_create() {
         exit 1
     fi
     
-    # Check if create-project.sh exists in current directory
-    if [ -f "$SCRIPT_DIR/create-project.sh" ]; then
-        if [ -n "$package_manager" ]; then
-            "$SCRIPT_DIR/create-project.sh" "$project_name" --pm "$package_manager"
-        else
-            "$SCRIPT_DIR/create-project.sh" "$project_name"
+    # Check internet connection
+    if [ "$OFFLINE_MODE" != true ]; then
+        print_info "Checking internet connection..."
+        if ! check_internet_connection; then
+            print_error "No internet connection detected"
+            print_info "The create command requires an internet connection to download the template"
+            print_info "Please check your connection or use --offline if you have a local copy"
+            exit 1
         fi
-    else
-        # Download and run the script
-        print_info "Downloading project generator..."
-        local temp_script="/tmp/hono-cf-create-$$.sh"
-        curl -fsSL "https://raw.githubusercontent.com/kurtiz/hono-cloudflare-starter/main/create-project.sh" -o "$temp_script"
-        chmod +x "$temp_script"
-        
-        if [ -n "$package_manager" ]; then
-            "$temp_script" "$project_name" --pm "$package_manager"
-        else
-            "$temp_script" "$project_name"
-        fi
-        
-        rm -f "$temp_script"
+        print_success "Internet connection OK"
     fi
+    
+    local target_dir
+    target_dir="$(pwd)/${project_name}"
+    
+    if [ -d "$target_dir" ]; then
+        print_error "Directory ${project_name} already exists!"
+        exit 1
+    fi
+    
+    print_info "Creating project: ${project_name}"
+    
+    # Clone from GitHub
+    print_info "Cloning template from GitHub..."
+    if ! git clone "$TEMPLATE_REPO" "$target_dir" --depth 1 2>/dev/null; then
+        print_error "Failed to clone repository"
+        print_info "Please check your internet connection and try again"
+        exit 1
+    fi
+    
+    # Remove .git directory to start fresh
+    rm -rf "$target_dir/.git"
+    
+    # Remove template-specific files
+    rm -f "$target_dir/create-project.sh"
+    rm -f "$target_dir/hono-cf"
+    rm -f "$target_dir/install.sh"
+    
+    # Update package.json with new project name
+    if [ -f "$target_dir/package.json" ]; then
+        sed -i.bak "s/\"name\": \"hono-cloudflare-starter\"/\"name\": \"${project_name}\"/" "$target_dir/package.json"
+        rm -f "$target_dir/package.json.bak"
+    fi
+    
+    # Update wrangler.jsonc with new project name
+    if [ -f "$target_dir/wrangler.jsonc" ]; then
+        sed -i.bak "s/\"name\": \"hono-cloudflare-starter\"/\"name\": \"${project_name}\"/" "$target_dir/wrangler.jsonc"
+        rm -f "$target_dir/wrangler.jsonc.bak"
+    fi
+    
+    # Remove the .env file if it exists (keep .env.example)
+    rm -f "$target_dir/.env"
+    
+    print_success "Project files created"
+    
+    # Check dependencies
+    print_info "Checking dependencies..."
+    
+    # Check git
+    if ! command -v git &> /dev/null; then
+        print_error "Git is not installed. Please install Git first."
+        exit 1
+    fi
+    print_success "Git is installed"
+    
+    # Detect or validate package manager
+    if [ -z "$package_manager" ]; then
+        package_manager=$(detect_package_manager)
+        if [ -z "$package_manager" ]; then
+            print_error "No package manager found. Please install one of: bun, pnpm, yarn, or npm"
+            exit 1
+        fi
+        print_success "Detected package manager: ${package_manager}"
+    else
+        if ! command -v "$package_manager" &> /dev/null; then
+            print_error "Specified package manager '${package_manager}' is not installed."
+            exit 1
+        fi
+        print_success "Using package manager: ${package_manager}"
+    fi
+    
+    # Check wrangler
+    if ! command -v wrangler &> /dev/null; then
+        print_warning "Wrangler is not installed. Installing..."
+        eval "$(get_global_install_command "$package_manager" wrangler)"
+    fi
+    print_success "Wrangler is installed"
+    
+    # Setup git
+    print_info "Initializing Git repository..."
+    cd "$target_dir"
+    git init > /dev/null 2>&1
+    git add . > /dev/null 2>&1
+    git commit -m "Initial commit from Hono Cloudflare Starter" > /dev/null 2>&1
+    print_success "Git repository initialized"
+    
+    # Install dependencies
+    print_info "Installing dependencies using ${package_manager}..."
+    cd "$target_dir"
+    if ! eval "$(get_install_command "$package_manager")"; then
+        print_error "Failed to install dependencies"
+        print_info "You can try installing manually by running: cd ${project_name} && $(get_install_command "$package_manager")"
+        exit 1
+    fi
+    print_success "Dependencies installed"
+    
+    # Generate types
+    print_info "Generating Cloudflare types..."
+    cd "$target_dir"
+    eval "$(get_run_command "$package_manager" "cf-typegen")" > /dev/null 2>&1 || true
+    print_success "Types generated"
+    
+    # Print next steps
+    local run_cmd
+    run_cmd=$(get_run_command "$package_manager" "dev")
+    
+    echo ""
+    echo -e "${GREEN}"
+    echo "╔══════════════════════════════════════════════════════════╗"
+    echo "║                   Project Created!                       ║"
+    echo "╚══════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+    echo ""
+    echo -e "${BLUE}Next steps:${NC}"
+    echo ""
+    echo "  1. cd ${project_name}"
+    echo "  2. cp .env.example .env"
+    echo "  3. Edit .env and add your configuration:"
+    echo "     - BETTER_AUTH_SECRET (generate with: openssl rand -base64 32)"
+    echo "     - DATABASE_URL (from Neon or other Postgres provider)"
+    echo "     - OAuth credentials (optional)"
+    echo ""
+    echo -e "  4. ${CYAN}$(get_run_command "$package_manager" "auth:generate")   # Generate auth schema${NC}"
+    echo -e "  5. ${CYAN}$(get_run_command "$package_manager" "db:push")          # Push schema to database${NC}"
+    echo -e "  6. ${CYAN}${run_cmd}              # Start dev server${NC}"
+    echo ""
+    echo -e "${BLUE}Available commands:${NC}"
+    echo "  $(get_run_command "$package_manager" "dev")              # Start dev server"
+    echo "  $(get_run_command "$package_manager" "deploy")           # Deploy to Cloudflare"
+    echo "  $(get_run_command "$package_manager" "db:studio")        # Open Drizzle Studio"
+    echo "  hono-cf g route <name>         # Generate new route"
+    echo "  hono-cf g schema <name>        # Generate new schema"
+    echo ""
+    echo -e "${BLUE}Documentation:${NC}"
+    echo "  - Better Auth: https://better-auth.com"
+    echo "  - Hono: https://hono.dev"
+    echo "  - Cloudflare Workers: https://workers.cloudflare.com"
+    echo ""
+    echo -e "${YELLOW}Happy coding! 🚀${NC}"
+    echo ""
 }
 
 show_create_help() {
@@ -157,10 +428,185 @@ show_create_help() {
     echo ""
     echo "Options:"
     echo "  --pm <pm>    Package manager (bun, pnpm, yarn, npm)"
+    echo "  --offline    Skip update checks"
     echo ""
     echo "Examples:"
     echo "  hono-cf create my-api"
     echo "  hono-cf create my-api --pm pnpm"
+    echo "  hono-cf create my-api --offline"
+}
+
+# ============================================
+# SELF-UPDATE COMMAND
+# ============================================
+
+cmd_self_update() {
+    if [ "$OFFLINE_MODE" = true ]; then
+        print_error "Cannot update in offline mode"
+        exit 1
+    fi
+    
+    print_header
+    print_info "Checking for updates..."
+    
+    # Check internet connection
+    if ! check_internet_connection; then
+        print_error "No internet connection detected"
+        print_info "Please check your connection and try again"
+        exit 1
+    fi
+    
+    # Get current installation path
+    local current_script
+    current_script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+    
+    print_info "Current installation: ${current_script}"
+    print_info "Current version: ${HONO_CF_VERSION}"
+    
+    # Get remote version
+    local remote_version
+    remote_version=$(get_remote_version)
+    
+    if [ -z "$remote_version" ]; then
+        print_error "Failed to check for updates"
+        print_info "Please check your internet connection and try again"
+        exit 1
+    fi
+    
+    print_info "Latest version: ${remote_version}"
+    
+    if [ "$remote_version" = "$HONO_CF_VERSION" ]; then
+        print_success "You already have the latest version!"
+        exit 0
+    fi
+    
+    echo ""
+    echo -e "${YELLOW}Update available: ${HONO_CF_VERSION} → ${remote_version}${NC}"
+    echo ""
+    
+    # Confirm update
+    read -p "Do you want to update? (y/N): " -n 1 -r
+    echo ""
+    
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_info "Update cancelled"
+        exit 0
+    fi
+    
+    # Download new version
+    print_info "Downloading update..."
+    local temp_file
+    temp_file="/tmp/hono-cf-update-$$"
+    
+    if ! curl -fsSL --max-time 30 "$REMOTE_SCRIPT_URL" -o "$temp_file"; then
+        print_error "Failed to download update"
+        exit 1
+    fi
+    
+    # Verify the download
+    if [ ! -s "$temp_file" ]; then
+        print_error "Downloaded file is empty"
+        rm -f "$temp_file"
+        exit 1
+    fi
+    
+    # Check if it's a valid bash script
+    if ! head -1 "$temp_file" | grep -q "#!/usr/bin/env bash"; then
+        print_error "Downloaded file doesn't appear to be a valid script"
+        rm -f "$temp_file"
+        exit 1
+    fi
+    
+    # Backup current version
+    local backup_file
+    backup_file="${current_script}.backup-$(date +%Y%m%d-%H%M%S)"
+    print_info "Creating backup: ${backup_file}"
+    cp "$current_script" "$backup_file"
+    
+    # Replace current version
+    print_info "Installing update..."
+    if ! mv "$temp_file" "$current_script"; then
+        print_error "Failed to install update"
+        print_info "Your backup is saved at: ${backup_file}"
+        rm -f "$temp_file"
+        exit 1
+    fi
+    
+    chmod +x "$current_script"
+    
+    print_success "Update installed successfully!"
+    print_info "You can restore the previous version with:"
+    echo "  mv ${backup_file} ${current_script}"
+    echo ""
+    print_info "Run 'hono-cf --version' to verify the update"
+}
+
+# ============================================
+# UNINSTALL COMMAND
+# ============================================
+
+cmd_uninstall() {
+    print_header
+    print_warning "This will remove hono-cf from your system"
+    echo ""
+    
+    # Find installation
+    local install_path
+    install_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+    
+    echo "Installation found at: ${install_path}"
+    echo ""
+    
+    read -p "Are you sure you want to uninstall? (y/N): " -n 1 -r
+    echo ""
+    
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_info "Uninstall cancelled"
+        exit 0
+    fi
+    
+    # Remove the script
+    print_info "Removing hono-cf..."
+    if rm -f "$install_path"; then
+        print_success "hono-cf has been removed"
+    else
+        print_error "Failed to remove hono-cf"
+        print_info "You may need to remove it manually: rm ${install_path}"
+        exit 1
+    fi
+    
+    # Check for cache directory
+    if [ -d "$CACHE_DIR" ]; then
+        print_info "Removing cache directory..."
+        rm -rf "$CACHE_DIR"
+        print_success "Cache removed"
+    fi
+    
+    # Find and suggest removing from PATH
+    echo ""
+    print_info "To complete uninstallation, you may want to remove PATH entries from your shell config:"
+    
+    # Detect shell
+    local shell_name
+    shell_name=$(basename "$SHELL")
+    
+    case "$shell_name" in
+        "bash")
+            echo "  ~/.bashrc"
+            ;;
+        "zsh")
+            echo "  ~/.zshrc"
+            ;;
+        "fish")
+            echo "  ~/.config/fish/config.fish"
+            ;;
+        *)
+            echo "  Your shell configuration file"
+            ;;
+    esac
+    
+    echo ""
+    print_success "Uninstall complete!"
 }
 
 # ============================================
@@ -430,13 +876,22 @@ EOF
         # Add export for schema
         if ! grep -q "from \"./${singular}\"" "$index_file"; then
             # Find the last export line and add after it
-            sed -i.bak "/^export {/a\\\n// ${singular} schema\nexport {\n  ${singular},\n  ${singular}Relations,\n} from \"./${singular}\";" "$index_file"
+            sed -i.bak "/^export {/a\
+// ${singular} schema
+export {
+  ${singular},
+  ${singular}Relations,
+} from \"./${singular}\";" "$index_file"
             rm -f "$index_file.bak"
         fi
         
         # Add export for types
         if ! grep -q "from \"./types/${singular}\"" "$index_file"; then
-            sed -i.bak "/^export type {/a\\\nexport type {\n  {{NAME}},\n  New{{NAME}},\n} from \"./types/${singular}\";" "$index_file"
+            sed -i.bak "/^export type {/a\
+export type {
+  {{NAME}},
+  New{{NAME}},
+} from \"./types/${singular}\";" "$index_file"
             sed -i.bak "s/{{NAME}}/${singular}/g" "$index_file"
             rm -f "$index_file.bak"
         fi
@@ -685,6 +1140,8 @@ show_help() {
     print_header
     echo "A CLI tool for Hono Cloudflare Starter"
     echo ""
+    echo -e "${CYAN}VERSION:${NC} ${HONO_CF_VERSION}"
+    echo ""
     echo -e "${CYAN}USAGE:${NC}"
     echo "  hono-cf <command> [options]"
     echo ""
@@ -702,6 +1159,14 @@ show_help() {
     echo "      types, t               Generate TypeScript types"
     echo "      service, svc           Generate service file"
     echo ""
+    echo "  self-update                Update hono-cf to latest version"
+    echo "  uninstall                  Remove hono-cf from your system"
+    echo ""
+    echo -e "${CYAN}GLOBAL OPTIONS:${NC}"
+    echo "  --offline                  Skip update checks"
+    echo "  --version, -v              Show version"
+    echo "  --help, -h                 Show help"
+    echo ""
     echo -e "${CYAN}EXAMPLES:${NC}"
     echo ""
     echo "  # Create a new project"
@@ -715,30 +1180,79 @@ show_help() {
     echo "  hono-cf g types product"
     echo "  hono-cf g service orders"
     echo ""
+    echo "  # Update or uninstall"
+    echo "  hono-cf self-update"
+    echo "  hono-cf uninstall"
+    echo ""
     echo -e "${CYAN}DOCUMENTATION:${NC}"
     echo "  https://github.com/kurtiz/hono-cloudflare-starter"
     echo ""
 }
 
 main() {
-    local command="$1"
+    local command=""
+    local args=()
     
-    if [ -z "$command" ] || [ "$command" = "--help" ] || [ "$command" = "-h" ]; then
+    # Parse global flags first
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --offline)
+                OFFLINE_MODE=true
+                shift
+                ;;
+            --version|-v)
+                echo "hono-cf version ${HONO_CF_VERSION}"
+                check_for_updates
+                exit 0
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            -*)
+                if [ -z "$command" ]; then
+                    print_error "Unknown option: $1"
+                    show_help
+                    exit 1
+                else
+                    args+=("$1")
+                fi
+                shift
+                ;;
+            *)
+                if [ -z "$command" ]; then
+                    command="$1"
+                else
+                    args+=("$1")
+                fi
+                shift
+                ;;
+        esac
+    done
+    
+    if [ -z "$command" ]; then
         show_help
         exit 0
     fi
     
-    shift
+    # Check for updates (unless offline mode)
+    if [ "$OFFLINE_MODE" != true ]; then
+        check_for_updates
+    fi
     
+    # Execute command
     case "$command" in
         create)
-            cmd_create "$@"
+            cmd_create "${args[@]}"
             ;;
         generate|g)
-            cmd_generate "$@"
+            cmd_generate "${args[@]}"
             ;;
-        --version|-v)
-            echo "hono-cf v1.0.0"
+        self-update)
+            cmd_self_update
+            ;;
+        uninstall)
+            cmd_uninstall
             ;;
         *)
             print_error "Unknown command: $command"
