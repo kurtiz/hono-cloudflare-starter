@@ -21,14 +21,18 @@ app.use(async (c, next) => {
   
   c.set("db", db);
   c.set("auth", auth);
-  
-  // Try to get session from request
-  try {
-    const session = await auth.api.getSession({
-      headers: c.req.raw.headers,
-    });
-    c.set("session", session);
-  } catch {
+
+  // Skip getSession for /api/auth paths to avoid "Body already used" error
+  if (!c.req.path.startsWith("/api/auth")) {
+    try {
+      const session = await auth.api.getSession({
+        headers: c.req.raw.headers,
+      });
+      c.set("session", session);
+    } catch {
+      c.set("session", null);
+    }
+  } else {
     c.set("session", null);
   }
   
