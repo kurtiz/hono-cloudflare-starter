@@ -425,7 +425,7 @@ Add a custom domain in the Cloudflare Dashboard:
 ### React/Vue/Angular
 
 ```typescript
-import { authClient } from "hono-cloudflare-starter/src/auth/auth-client";
+import { authClient } from "lib/auth-client";
 
 // Sign in
 await authClient.signIn.email({
@@ -561,7 +561,7 @@ socialProviders: {
 },
 ```
 
-Don't forget to add the client to `src/auth/auth-client.ts` too.
+Don't forget to set up the client to on the client side of the project (see [Frontend Integration](#frontend-integration)).
 
 ### Adding Database Tables
 
